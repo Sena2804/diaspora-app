@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>04 · Transfert confirmé (light) — DiasporaConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/theme.css" />
+<style>
+  body {
+    background:
+      radial-gradient(900px 600px at 50% -10%, rgba(13,148,136,0.18), transparent 60%),
+      radial-gradient(700px 500px at 50% 100%, rgba(234,88,12,0.10), transparent 60%),
+      var(--bg-canvas);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+  }
+  .wrap { width: 100%; max-width: 720px; padding: 32px; }
+
+  .success-burst {
+    width: 100px; height: 100px;
+    margin: 0 auto 24px;
+    position: relative;
+  }
+  .burst-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+    animation: bloom 2s ease-out infinite;
+  }
+  @keyframes bloom {
+    0%   { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+  .check-circle {
+    position: absolute; inset: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    display: grid; place-items: center;
+    box-shadow: 0 12px 40px var(--primary-glow);
+  }
+  .check-circle svg { width: 38px; height: 38px; color: #fff; }
+  [data-theme="light"] .check-circle svg { color: #fff; }
+
+  h1 { font-size: 38px; letter-spacing: -0.04em; font-weight: 700; margin: 0 0 10px; text-align: center; }
+  .lead { text-align: center; color: var(--text-secondary); font-size: 15px; max-width: 500px; margin: 0 auto 36px; }
+  .lead strong { color: var(--text-primary); }
+
+  .summary-card { padding: 28px; border-radius: var(--r-2xl); border: 1px solid var(--border-subtle); background: var(--bg-surface); }
+
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+  .row:last-of-type { border-bottom: 0; }
+  .row .l { color: var(--text-tertiary); }
+  .row .v { font-family: var(--font-mono); font-weight: 500; color: var(--text-primary); }
+  .row.amount-row { padding: 18px 0; }
+  .row.amount-row .v { font-size: 22px; font-weight: 600; }
+
+  .timeline { margin: 26px 0 0; padding: 18px 22px; border: 1px solid var(--border-subtle); border-radius: var(--r-lg); background: var(--bg-base); }
+  .tl-step { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
+  .tl-step .ic { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+  .tl-step.done .ic { background: var(--success-soft); color: var(--success); border: 1.5px solid rgba(52,211,153,0.4); }
+  .tl-step.active .ic { background: var(--primary-soft); color: var(--primary); border: 1.5px solid var(--primary); animation: pulse-ring 1.6s infinite; }
+  .tl-step.pending .ic { background: var(--bg-elevated); color: var(--text-muted); border: 1.5px solid var(--border-subtle); }
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 var(--primary-soft); }
+    50% { box-shadow: 0 0 0 6px var(--primary-soft); }
+  }
+  .tl-step .info { flex: 1; }
+  .tl-step .name { font-size: 13px; font-weight: 600; }
+  .tl-step .sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 1px; font-family: var(--font-mono); }
+  .tl-step .time { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-tertiary); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+  .secondary-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
+
+  .impact-tag { display: inline-flex; align-items: center; gap: 8px; margin: 0 auto 26px; padding: 7px 14px; border-radius: var(--r-full); background: var(--primary-soft); border: 1px solid rgba(45,212,191,0.30); font-size: 12.5px; color: var(--primary); font-weight: 600; }
+
+  .small-meta { font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 22px; line-height: 1.6; font-family: var(--font-mono); }
+  .small-meta a { color: var(--primary); text-decoration: none; }
+
+  .recipient-block { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: var(--r-md); background: var(--bg-elevated); margin-bottom: 6px; }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="wrap">
+
+  <div style="text-align:center">
+    <div class="success-burst">
+      <div class="burst-ring"></div>
+      <div class="check-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+    </div>
+
+    <h1>Transfert confirmé.</h1>
+    <p class="lead">
+      Le smart contract Stellar a reçu vos fonds et notifie <strong>Edwige Adjovi</strong> à Porto-Novo. L'argent arrive sur son Moov Money en moins de 30&nbsp;secondes.
+    </p>
+
+    <div class="impact-tag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+      Vous économisez €15,50 vs Western Union
+    </div>
+  </div>
+
+  <div class="summary-card">
+
+    <div class="recipient-block">
+      <div class="avatar" style="width:42px;height:42px;background:linear-gradient(135deg,#F97316,#FBBF24);font-size:14px">EA</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600">Edwige Adjovi</div>
+        <div style="font-size:11.5px;color:var(--text-tertiary)" class="mono">+229 96 14 88 02 · Moov Money</div>
+      </div>
+      <span class="pill primary"><span class="dot pulse"></span>En cours · ETA 18 s</span>
+    </div>
+
+    <div class="row amount-row">
+      <span class="l">Montant reçu (estimé)</span>
+      <span class="v" style="color:var(--primary)">131 100 <span style="font-size:14px;color:var(--text-tertiary)">XOF</span></span>
+    </div>
+    <div class="row">
+      <span class="l">Vous avez envoyé</span>
+      <span class="v">€200,00 (200,40 €)</span>
+    </div>
+    <div class="row">
+      <span class="l">Stablecoin transféré</span>
+      <span class="v">216,00 USDC</span>
+    </div>
+    <div class="row">
+      <span class="l">Frais Stellar</span>
+      <span class="v" style="color:var(--success)">€0,00001 (≈ 0)</span>
+    </div>
+    <div class="row">
+      <span class="l">Hash de transaction</span>
+      <span class="hash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71"/></svg>
+        a3f9c8…7d21b4
+      </span>
+    </div>
+    <div class="row">
+      <span class="l">Réseau · ledger</span>
+      <span class="v">Stellar Mainnet · #58,294,103</span>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline">
+      <div style="font-size:11px;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-tertiary);font-weight:600;margin-bottom:8px">Suivi en temps réel</div>
+      <div class="tl-step done">
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="info">
+          <div class="name">EUR débité de votre compte</div>
+          <div class="sub">14:32:08 · Conversion EUR → USDC instantanée</div>
+        </div>
+        <span class="time">+0 s</span>
+      </div>
+      <div class="tl-step done">
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="info">
+          <div class="name">Smart contract Soroban exécuté</div>
+          <div class="sub">14:32:12 · Fonds bloqués au profit d'Edwige</div>
+        </div>
+        <span class="time">+4 s</span>
+      </div>
+      <div class="tl-step active">
+        <div class="ic">3</div>
+        <div class="info">
+          <div class="name">Conversion USDC → XOF en cours</div>
+          <div class="sub">Anchor Bénin · Off-ramp Moov Money</div>
+        </div>
+        <span class="time">+12 s</span>
+      </div>
+      <div class="tl-step pending">
+        <div class="ic">4</div>
+        <div class="info">
+          <div class="name">Crédit Mobile Money chez Edwige</div>
+          <div class="sub">SMS de confirmation Moov</div>
+        </div>
+        <span class="time">~30 s</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary btn-lg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+        Voir le reçu PDF
+      </button>
+      <button class="btn btn-ghost btn-lg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+        Envoyer à nouveau
+      </button>
+    </div>
+
+    <div class="secondary-actions">
+      <button class="btn btn-ghost" style="font-size:12px;padding:7px 12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+        Partager
+      </button>
+      <button class="btn btn-ghost" style="font-size:12px;padding:7px 12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Notifier par WhatsApp
+      </button>
+      <button class="btn btn-ghost" style="font-size:12px;padding:7px 12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        stellar.expert
+      </button>
+    </div>
+  </div>
+
+  <div class="small-meta">
+    Cette transaction est immutable et publique sur la blockchain Stellar.<br/>
+    <a href="#">stellar.expert/explorer/public/tx/a3f9c8...7d21b4</a>
+  </div>
+
+</div>
+
+</body>
+</html>

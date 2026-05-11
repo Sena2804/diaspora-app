@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>08 · Écrans mobiles — DiasporaConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/theme.css" />
+<style>
+  body {
+    background:
+      radial-gradient(900px 600px at 90% 0%, rgba(45,212,191,0.10), transparent 60%),
+      radial-gradient(700px 500px at 5% 90%, rgba(249,115,22,0.07), transparent 60%),
+      var(--bg-canvas);
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 50px; }
+  .header h1 { font-size: 36px; letter-spacing: -0.04em; font-weight: 700; margin: 0 0 8px; }
+  .header p { color: var(--text-secondary); margin: 0 auto; max-width: 600px; font-size: 14px; }
+
+  .stage {
+    display: flex;
+    gap: 36px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .phone-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .phone-label strong { display: block; color: var(--text-primary); font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+
+  /* Mobile screen styles ─────────────────────── */
+  .m-status {
+    height: 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .m-status .icons { display: flex; gap: 6px; align-items: center; }
+
+  .m-header {
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .m-header .greet { font-size: 13px; }
+  .m-header .greet b { color: var(--text-primary); }
+  .m-header .greet span { color: var(--text-tertiary); font-size: 11px; }
+  .m-header .ico { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elevated); display: grid; place-items: center; color: var(--text-secondary); position: relative; }
+  .m-header .ico::after { content: ""; position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  .m-balance-card {
+    margin: 12px 14px;
+    padding: 18px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    color: #042F2E;
+    box-shadow: 0 12px 32px var(--primary-glow);
+    position: relative;
+    overflow: hidden;
+  }
+  .m-balance-card::before {
+    content: ""; position: absolute; right: -40px; top: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 60%);
+    border-radius: 50%;
+  }
+  .m-balance-card .lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+  .m-balance-card .val { font-family: var(--font-mono); font-size: 32px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin: 6px 0; }
+  .m-balance-card .alt { font-family: var(--font-mono); font-size: 12px; opacity: 0.7; }
+  .m-balance-card .actions { display: flex; gap: 8px; margin-top: 14px; position: relative; z-index: 1; }
+  .m-balance-card .actions button { flex: 1; padding: 9px; border-radius: 8px; border: 0; background: rgba(255,255,255,0.20); color: #042F2E; font-weight: 600; font-size: 12px; backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .m-balance-card.recv {
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    color: #1a0a02;
+    box-shadow: 0 12px 32px var(--accent-glow);
+  }
+  .m-balance-card.recv .actions button { color: #1a0a02; }
+
+  .m-section { padding: 0 14px; }
+  .m-section-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 4px 8px; }
+  .m-section-head h4 { margin: 0; font-size: 13px; font-weight: 600; }
+  .m-section-head a { font-size: 11px; color: var(--text-tertiary); text-decoration: none; }
+
+  .m-tx { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-md); }
+  .m-tx + .m-tx { margin-top: 4px; }
+  .m-tx .av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; color: #042F2E; font-weight: 700; font-size: 11px; }
+  .m-tx .info { flex: 1; min-width: 0; }
+  .m-tx .name { font-size: 12px; font-weight: 600; }
+  .m-tx .meta { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; font-family: var(--font-mono); }
+  .m-tx .right { text-align: right; }
+  .m-tx .amt { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--success); }
+  .m-tx .time { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; font-family: var(--font-mono); }
+
+  .m-bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    padding: 10px 8px 20px;
+  }
+  .m-bottom-nav button {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px;
+    background: transparent; border: 0;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-family: inherit;
+  }
+  .m-bottom-nav button.active { color: var(--primary); }
+  .m-bottom-nav button.fab {
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    color: #042F2E;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    margin-top: -16px;
+    align-self: center;
+    justify-self: center;
+    box-shadow: 0 6px 18px var(--primary-glow);
+  }
+  .m-bottom-nav button.fab.accent {
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    color: #1a0a02;
+    box-shadow: 0 6px 18px var(--accent-glow);
+  }
+
+  /* Send screen */
+  .m-back { padding: 6px 18px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+  .m-title { padding: 0 18px 14px; }
+  .m-title h2 { margin: 0; font-size: 22px; letter-spacing: -0.03em; font-weight: 700; }
+  .m-title p { margin: 4px 0 0; font-size: 12px; color: var(--text-tertiary); }
+
+  .m-amount-input {
+    margin: 0 14px;
+    padding: 18px;
+    border-radius: var(--r-lg);
+    background: var(--bg-elevated);
+    border: 1.5px solid var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-soft);
+    text-align: center;
+  }
+  .m-amount-input .currency-line {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .m-amount-input .symbol {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    color: var(--text-tertiary);
+  }
+  .m-amount-input input {
+    background: transparent; border: 0; outline: 0;
+    font-family: var(--font-mono);
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--text-primary);
+    width: 130px;
+    text-align: center;
+  }
+  .m-amount-input .conv { font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
+  .m-presets { display: flex; gap: 6px; margin: 12px 14px 0; flex-wrap: wrap; justify-content: center; }
+  .m-preset { padding: 6px 11px; border-radius: var(--r-full); background: var(--bg-elevated); border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+  .m-preset.active { background: var(--primary-soft); border-color: rgba(45,212,191,0.4); color: var(--primary); }
+
+  .m-recipient-list { padding: 0 14px; margin-top: 14px; }
+  .m-recipient {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 6px;
+  }
+  .m-recipient.active { border-color: var(--primary); background: linear-gradient(180deg, rgba(45,212,191,0.05), transparent), var(--bg-elevated); }
+  .m-recipient .av { width: 32px; height: 32px; border-radius: 50%; }
+  .m-recipient .name { font-size: 12.5px; font-weight: 600; }
+  .m-recipient .meta { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 1px; }
+
+  .m-cta {
+    position: absolute; left: 14px; right: 14px; bottom: 80px;
+    padding: 13px;
+    border-radius: var(--r-md);
+    background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+    color: #042F2E;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--primary-glow);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* Success */
+  .m-success { padding: 30px 22px 0; text-align: center; }
+  .m-success .check {
+    width: 80px; height: 80px;
+    margin: 16px auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    display: grid; place-items: center;
+    box-shadow: 0 12px 36px var(--primary-glow);
+  }
+  .m-success h2 { margin: 0; font-size: 22px; letter-spacing: -0.03em; font-weight: 700; }
+  .m-success p { color: var(--text-secondary); font-size: 12.5px; margin: 6px 0 18px; line-height: 1.5; }
+
+  .m-tx-card {
+    margin: 0 14px;
+    padding: 16px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    text-align: left;
+  }
+  .m-tx-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 11.5px; }
+  .m-tx-row + .m-tx-row { border-top: 1px solid var(--border-subtle); }
+  .m-tx-row .l { color: var(--text-tertiary); }
+  .m-tx-row .v { font-family: var(--font-mono); }
+
+  .label-tag {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    padding: 0 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <span class="eyebrow gold" style="margin:0 auto 14px;display:inline-flex">PWA · Mobile-first</span>
+    <h1>Une expérience native sur smartphone</h1>
+    <p>L'application est une PWA installable, offline-first, optimisée pour les réseaux 3G du Bénin et les iPhone/Android de la diaspora.</p>
+  </div>
+
+  <div class="stage">
+
+    <!-- Phone 1 — Diaspora Home -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="m-status">
+            <span>14:32</span>
+            <div class="icons">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px"><path d="M2 19h2v-7H2zM6 19h2V8H6zM10 19h2V4h-2zM14 19h2v-9h-2zM18 19h2V6h-2z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><path d="M2 4h20v16H2z"/></svg>
+              <span>87%</span>
+            </div>
+          </div>
+
+          <div class="m-header">
+            <div class="greet">
+              <b>Bonjour Aminata 👋</b><br/>
+              <span>Solde wallet diaspora</span>
+            </div>
+            <div class="ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+            </div>
+          </div>
+
+          <div class="m-balance-card">
+            <div class="lbl">Wallet · Stellar</div>
+            <div class="val">€2 296,40</div>
+            <div class="alt">2 480 USDC · GBKL…JX9F</div>
+            <div class="actions">
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+                Envoyer
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"/></svg>
+                Recharger
+              </button>
+            </div>
+          </div>
+
+          <div class="m-section">
+            <div class="m-section-head">
+              <h4>Transferts récents</h4>
+              <a href="#">Tout →</a>
+            </div>
+            <div class="m-tx">
+              <div class="av" style="background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a0a02">EA</div>
+              <div class="info">
+                <div class="name">Edwige Adjovi</div>
+                <div class="meta">Porto-Novo · Moov</div>
+              </div>
+              <div class="right">
+                <div class="amt" style="color:var(--accent)">−€200</div>
+                <div class="time">il y a 18 s</div>
+              </div>
+            </div>
+            <div class="m-tx">
+              <div class="av" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)">FK</div>
+              <div class="info">
+                <div class="name">Fatou Kpogan</div>
+                <div class="meta">Cotonou · MTN</div>
+              </div>
+              <div class="right">
+                <div class="amt" style="color:var(--accent)">−€100</div>
+                <div class="time">il y a 2 h</div>
+              </div>
+            </div>
+            <div class="m-tx">
+              <div class="av" style="background:linear-gradient(135deg,#818CF8,#A78BFA);color:#1e1b4b">SD</div>
+              <div class="info">
+                <div class="name">Salif Dossou</div>
+                <div class="meta">Parakou · Celtiis</div>
+              </div>
+              <div class="right">
+                <div class="amt" style="color:var(--accent)">−€150</div>
+                <div class="time">03/05</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="m-bottom-nav">
+            <button class="active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+              Accueil
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Historique
+            </button>
+            <button class="fab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              Proches
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+              Profil
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Diaspora · Accueil</strong>Aminata · 🇫🇷 Paris</div>
+    </div>
+
+    <!-- Phone 2 — Send -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="m-status">
+            <span>14:31</span>
+            <div class="icons">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px"><path d="M2 19h2v-7H2zM6 19h2V8H6zM10 19h2V4h-2zM14 19h2v-9h-2zM18 19h2V6h-2z"/></svg>
+              <span>87%</span>
+            </div>
+          </div>
+
+          <div class="m-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Annuler
+          </div>
+
+          <div class="m-title">
+            <h2>Combien&nbsp;?</h2>
+            <p>Vers Edwige · Moov Money</p>
+          </div>
+
+          <div class="m-amount-input">
+            <div class="currency-line">
+              <span class="symbol">€</span>
+              <input value="200" />
+            </div>
+            <div class="conv">≈ 131&nbsp;100 XOF · taux garanti 12 min</div>
+          </div>
+
+          <div class="m-presets">
+            <button class="m-preset">€50</button>
+            <button class="m-preset">€100</button>
+            <button class="m-preset active">€200</button>
+            <button class="m-preset">€500</button>
+          </div>
+
+          <div class="m-section">
+            <div class="m-section-head">
+              <h4>Vers</h4>
+              <a href="#">Changer</a>
+            </div>
+            <div class="m-recipient active">
+              <div class="av" style="background:linear-gradient(135deg,#F97316,#FBBF24)"></div>
+              <div style="flex:1">
+                <div class="name">Edwige Adjovi · sœur</div>
+                <div class="meta">+229 96 14 88 02 · Moov</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:16px;height:16px"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+          </div>
+
+          <div style="margin: 14px; padding: 12px; border-radius: var(--r-md); background: var(--bg-elevated); border: 1px solid var(--border-subtle); font-size: 11px;">
+            <div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--text-tertiary)"><span>Frais (0,2 %)</span><span class="mono" style="color:var(--text-primary)">€0,40</span></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--text-tertiary)"><span>Vous économisez</span><span class="mono" style="color:var(--primary)">€15,50</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--border-subtle);font-weight:600"><span>Total débité</span><span class="mono">€200,40</span></div>
+          </div>
+
+          <div class="m-cta">
+            Confirmer & signer
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </div>
+
+          <div class="m-bottom-nav">
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>Accueil</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Historique</button>
+            <button class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg></button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Proches</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>Profil</button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Diaspora · Envoi</strong>Étape « combien »</div>
+    </div>
+
+    <!-- Phone 3 — Success -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="m-status">
+            <span>14:32</span>
+            <div class="icons">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px"><path d="M2 19h2v-7H2zM6 19h2V8H6zM10 19h2V4h-2zM14 19h2v-9h-2zM18 19h2V6h-2z"/></svg>
+              <span>87%</span>
+            </div>
+          </div>
+
+          <div class="m-success">
+            <div class="check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#042F2E" stroke-width="3" style="width:34px;height:34px"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h2>Envoyé !</h2>
+            <p>Edwige reçoit <strong style="color:var(--text-primary)">131 100 XOF</strong> sur Moov Money en moins de 30 s.</p>
+          </div>
+
+          <div class="m-tx-card">
+            <div class="m-tx-row"><span class="l">Hash</span><span class="v"><span class="hash" style="font-size:9.5px;padding:2px 6px">a3f9c8…7d21b4</span></span></div>
+            <div class="m-tx-row"><span class="l">Réseau</span><span class="v">Stellar Mainnet</span></div>
+            <div class="m-tx-row"><span class="l">Confirmation</span><span class="v" style="color:var(--success)">4,2 s</span></div>
+            <div class="m-tx-row"><span class="l">Frais payés</span><span class="v">€0,40</span></div>
+            <div class="m-tx-row"><span class="l">Économisé</span><span class="v" style="color:var(--primary)">€15,50</span></div>
+          </div>
+
+          <div class="label-tag">Suivez l'arrivée en temps réel ↓</div>
+
+          <div style="margin: 12px 14px; padding: 12px; border-radius: var(--r-md); background: var(--primary-soft); border: 1px solid rgba(45,212,191,0.25);">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--primary);font-weight:600">
+              <span style="width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite"></span>
+              Conversion USDC → XOF en cours · ETA 14 s
+            </div>
+          </div>
+
+          <div class="m-cta" style="bottom: 20px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+            Voir le reçu
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Diaspora · Confirmation</strong>Hash blockchain visible</div>
+    </div>
+
+    <!-- Phone 4 — Receiver Wallet -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="m-status">
+            <span>14:32</span>
+            <div class="icons">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px"><path d="M2 19h2v-7H2zM6 19h2V8H6zM10 19h2V4h-2zM14 19h2v-9h-2zM18 19h2V6h-2z"/></svg>
+              <span>72%</span>
+            </div>
+          </div>
+
+          <div class="m-header">
+            <div class="greet">
+              <b>Edwige · Bénin 🇧🇯</b><br/>
+              <span>Wallet destinataire</span>
+            </div>
+            <div class="ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+            </div>
+          </div>
+
+          <div class="m-balance-card recv">
+            <div class="lbl">Solde · Mobile Money</div>
+            <div class="val">228 850</div>
+            <div class="alt">XOF · ≈ €349,01</div>
+            <div class="actions">
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Retirer
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg>
+                QR
+              </button>
+            </div>
+          </div>
+
+          <div style="margin: 0 14px; padding: 10px 12px; border: 1px dashed rgba(251,191,36,0.30); background: var(--gold-soft); border-radius: var(--r-md); display: flex; gap: 8px; align-items: center;">
+            <div style="width:24px;height:24px;border-radius:50%;background:var(--gold);display:grid;place-items:center;flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#1a0a02" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div style="font-size:11px;color:var(--gold);font-weight:600;line-height:1.3">
+              131 100 XOF en attente<br/>
+              <span style="color:var(--text-tertiary);font-weight:400;font-size:10px">Reçu il y a 18 s · arrive sur Moov</span>
+            </div>
+          </div>
+
+          <div class="m-section">
+            <div class="m-section-head">
+              <h4>Reçus récents</h4>
+              <a href="#">Tout →</a>
+            </div>
+            <div class="m-tx">
+              <div class="av" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)">AD</div>
+              <div class="info">
+                <div class="name">Aminata · 🇫🇷</div>
+                <div class="meta">Conversion en cours</div>
+              </div>
+              <div class="right">
+                <div class="amt">+131 100</div>
+                <div class="time">18 s</div>
+              </div>
+            </div>
+            <div class="m-tx">
+              <div class="av" style="background:linear-gradient(135deg,#818CF8,#A78BFA);color:#1e1b4b">JO</div>
+              <div class="info">
+                <div class="name">Jean · 🇧🇪</div>
+                <div class="meta">Retiré · MTN</div>
+              </div>
+              <div class="right">
+                <div class="amt">+52 440</div>
+                <div class="time">02/05</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="m-bottom-nav">
+            <button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>Wallet</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Reçus</button>
+            <button class="fab accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg>QR</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>Profil</button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Bénin · Wallet</strong>Edwige · Porto-Novo</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:60px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:920px;margin-left:auto;margin-right:auto">
+    <div style="padding:16px;border-radius:var(--r-lg);background:var(--bg-surface);border:1px solid var(--border-subtle)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="m12 15 8-8M4 16l4 4M16 12l-8 8M16 4l4 4"/></svg></div>
+        <div style="font-size:13px;font-weight:600">Offline-first</div>
+      </div>
+      <p style="margin:0;font-size:12px;color:var(--text-tertiary);line-height:1.5">Les soldes et reçus restent visibles sans connexion. La queue de transactions se synchronise dès le retour 3G.</p>
+    </div>
+    <div style="padding:16px;border-radius:var(--r-lg);background:var(--bg-surface);border:1px solid var(--border-subtle)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg></div>
+        <div style="font-size:13px;font-weight:600">Installable PWA</div>
+      </div>
+      <p style="margin:0;font-size:12px;color:var(--text-tertiary);line-height:1.5">Pas de friction « passer par l'App Store ». Ajout à l'écran d'accueil iOS et Android, push notifications natives.</p>
+    </div>
+    <div style="padding:16px;border-radius:var(--r-lg);background:var(--bg-surface);border:1px solid var(--border-subtle)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M12 2v4M4.93 4.93l2.83 2.83M2 12h4M4.93 19.07l2.83-2.83M12 22v-4M19.07 19.07l-2.83-2.83M22 12h-4M19.07 4.93l-2.83 2.83"/></svg></div>
+        <div style="font-size:13px;font-weight:600">Lite-mode 3G</div>
+      </div>
+      <p style="margin:0;font-size:12px;color:var(--text-tertiary);line-height:1.5">Bundle &lt; 200 Ko, polices système, images SVG. Fonctionne sur smartphones d'entrée de gamme typiques au Bénin.</p>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:36px"><a href="index.html" style="color:var(--primary);text-decoration:none;font-size:13px;font-family:var(--font-mono)">← Retour à l'index des maquettes</a></div>
+
+</div>
+
+</body>
+</html>
