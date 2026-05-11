@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>06 · Retrait Mobile Money — DiasporaConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/theme.css" />
+<style>
+  .container { max-width: 940px; margin: 0 auto; padding: 36px 32px 60px; }
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; align-items: start; }
+
+  .operator-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .operator-tile {
+    padding: 18px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+  .operator-tile:hover { border-color: var(--border-strong); }
+  .operator-tile.active {
+    border-color: var(--primary);
+    background: linear-gradient(180deg, rgba(45,212,191,0.05), transparent), var(--bg-elevated);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .operator-tile .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .operator-tile .logo {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .operator-tile.mtn .logo { background: #FFCB05; color: #000; }
+  .operator-tile.moov .logo { background: #00549F; color: #fff; }
+  .operator-tile.celtiis .logo { background: #1D7B5A; color: #fff; }
+  .operator-tile .title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .operator-tile .meta { font-size: 11.5px; color: var(--text-tertiary); }
+  .operator-tile .badge-fee { padding: 2px 7px; font-size: 10px; border-radius: var(--r-full); background: var(--success-soft); color: var(--success); font-weight: 600; }
+
+  .summary-card {
+    padding: 24px;
+    background: linear-gradient(180deg, var(--bg-surface), var(--bg-elevated));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    position: sticky; top: 28px;
+  }
+
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; font-size: 13px; }
+  .row.bordered { border-bottom: 1px solid var(--border-subtle); }
+  .row .l { color: var(--text-tertiary); }
+  .row .v { font-family: var(--font-mono); font-weight: 500; }
+  .row.total { border-top: 1px solid var(--border-subtle); margin-top: 4px; padding-top: 16px; }
+  .row.total .l { color: var(--text-primary); font-weight: 600; font-size: 14px; }
+  .row.total .v { font-size: 22px; font-weight: 600; color: var(--accent); }
+
+  .otp-row { display: flex; gap: 10px; margin-top: 12px; }
+  .otp-cell {
+    flex: 1;
+    height: 50px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .otp-cell.filled { border-color: var(--primary); }
+  .otp-cell.active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+  .info-strip { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: var(--gold-soft); border: 1px solid rgba(251,191,36,0.18); border-radius: var(--r-md); font-size: 12px; color: var(--gold); }
+
+  .preset-amounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .preset-amount {
+    padding: 9px 0;
+    border-radius: var(--r-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .preset-amount.active { background: var(--primary-soft); border-color: rgba(45,212,191,0.4); color: var(--primary); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3l9 9-9 9"/></svg></div>
+      <span class="name">Diaspora<span>Connect</span></span>
+    </div>
+    <nav class="nav-group">
+      <span class="nav-label">Destinataire</span>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+        Mon wallet
+      </a>
+      <a class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+        Retirer
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Transferts reçus
+      </a>
+    </nav>
+    <div class="user-card">
+      <div class="avatar" style="background:linear-gradient(135deg,#F97316,#FBBF24)">EA</div>
+      <div class="info">
+        <div class="name">Edwige Adjovi</div>
+        <div class="meta">Porto-Novo</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Retirer sur Mobile Money</h1>
+        <div class="sub">Convertissez votre solde XOF en cash chez votre opérateur préféré — instantanément.</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-icon" title="Annuler">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step done"><span class="num">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>
+      </span> Opérateur</div>
+      <div class="step-divider"></div>
+      <div class="step active"><span class="num">2</span> Montant</div>
+      <div class="step-divider"></div>
+      <div class="step"><span class="num">3</span> Code SMS</div>
+    </div>
+
+    <div class="grid-2">
+      <!-- LEFT -->
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <!-- Operator selection -->
+        <div class="card">
+          <h3 style="margin:0 0 4px;font-size:15px;font-weight:600">Choisissez votre opérateur</h3>
+          <p style="margin:0 0 14px;font-size:12.5px;color:var(--text-tertiary)">Frais de retrait offerts par DiasporaConnect — vous recevez le montant exact.</p>
+
+          <div class="operator-grid">
+            <button class="operator-tile moov active">
+              <div class="head">
+                <div class="logo">M</div>
+                <span class="badge-fee">0 XOF</span>
+              </div>
+              <div class="title">Moov Money</div>
+              <div class="meta">+229 96 14 88 02</div>
+            </button>
+            <button class="operator-tile mtn">
+              <div class="head">
+                <div class="logo">MTN</div>
+                <span class="badge-fee">0 XOF</span>
+              </div>
+              <div class="title">MTN MoMo</div>
+              <div class="meta">Ajouter un numéro</div>
+            </button>
+            <button class="operator-tile celtiis">
+              <div class="head">
+                <div class="logo">C</div>
+                <span class="badge-fee">0 XOF</span>
+              </div>
+              <div class="title">Celtiis Cash</div>
+              <div class="meta">Ajouter un numéro</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="card">
+          <h3 style="margin:0 0 4px;font-size:15px;font-weight:600">Combien retirer&nbsp;?</h3>
+          <p style="margin:0 0 14px;font-size:12.5px;color:var(--text-tertiary)">Solde disponible : <span class="mono" style="color:var(--text-primary)">228 850 XOF</span></p>
+
+          <div class="amount-input focus">
+            <div style="display:flex;align-items:center;gap:8px;flex:1">
+              <input type="text" value="131 100" />
+            </div>
+            <span class="currency">XOF</span>
+          </div>
+
+          <div class="preset-amounts">
+            <button class="preset-amount">25 000</button>
+            <button class="preset-amount">50 000</button>
+            <button class="preset-amount">100 000</button>
+            <button class="preset-amount active">131 100</button>
+          </div>
+
+          <div style="margin-top:14px;padding:11px 13px;border-radius:var(--r-md);background:var(--bg-base);border:1px dashed var(--border);display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12.5px">
+            <span style="color:var(--text-tertiary)">Solde après retrait</span>
+            <span style="color:var(--text-primary);font-weight:600">97 750 XOF</span>
+          </div>
+        </div>
+
+        <!-- OTP simulation -->
+        <div class="card">
+          <h3 style="margin:0 0 4px;font-size:15px;font-weight:600">Code de confirmation</h3>
+          <p style="margin:0 0 4px;font-size:12.5px;color:var(--text-tertiary)">Entrez le code à 6 chiffres reçu par SMS au <span class="mono">+229 96 14 88 02</span>.</p>
+
+          <div class="otp-row">
+            <input class="otp-cell filled" value="3" maxlength="1" />
+            <input class="otp-cell filled" value="9" maxlength="1" />
+            <input class="otp-cell filled" value="4" maxlength="1" />
+            <input class="otp-cell active" value="7" maxlength="1" />
+            <input class="otp-cell" />
+            <input class="otp-cell" />
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px">
+            <span style="color:var(--text-tertiary)">Pas reçu&nbsp;?</span>
+            <a href="#" style="color:var(--primary);text-decoration:none;font-weight:500" class="mono">Renvoyer (00:36)</a>
+          </div>
+
+          <div class="info-strip" style="margin-top:14px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            La signature est faite côté serveur via votre clé custodial sécurisée — pas de phrase secrète à gérer.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT — Summary -->
+      <div class="summary-card">
+        <span class="eyebrow accent">Récapitulatif</span>
+        <h3 style="margin:8px 0 18px;font-size:18px;letter-spacing:-0.02em">Retrait sur Moov Money</h3>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r-md);background:var(--bg-base);border:1px solid var(--border-subtle);margin-bottom:16px">
+          <div style="width:38px;height:38px;border-radius:50%;background:#00549F;color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px">M</div>
+          <div>
+            <div style="font-size:13.5px;font-weight:600">Moov Money — Edwige</div>
+            <div class="mono" style="font-size:11.5px;color:var(--text-tertiary)">+229 96 14 88 02</div>
+          </div>
+          <span class="pill primary" style="margin-left:auto"><span class="dot"></span>Vérifié</span>
+        </div>
+
+        <div class="row">
+          <span class="l">Montant retiré</span>
+          <span class="v">131 100 XOF</span>
+        </div>
+        <div class="row">
+          <span class="l">Frais opérateur</span>
+          <span class="v" style="color:var(--success)">0 XOF</span>
+        </div>
+        <div class="row">
+          <span class="l">Frais DiasporaConnect</span>
+          <span class="v" style="color:var(--success)">0 XOF</span>
+        </div>
+        <div class="row">
+          <span class="l">Conversion via</span>
+          <span class="v" style="font-size:11px;color:var(--text-tertiary)">Anchor Stellar · USDC</span>
+        </div>
+        <div class="row total">
+          <span class="l">Edwige reçoit</span>
+          <span class="v">131 100 XOF</span>
+        </div>
+
+        <button class="btn btn-accent btn-lg btn-block" style="margin-top:18px">
+          Confirmer le retrait
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-subtle)">
+          <div style="display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--text-tertiary)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--success)"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Crédit sur Moov Money en moins de <strong style="color:var(--text-primary)">10 secondes</strong>.
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--text-tertiary);margin-top:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--gold)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Smart contract Stellar libère les fonds, pas une banque.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
