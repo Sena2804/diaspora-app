@@ -1,92 +1,155 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useRouter } from 'next/navigation';
+import type { User as SupaUser } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
-interface User {
+type FrontendRole = 'sender' | 'receiver';
+type DbRole = 'expediteur' | 'beneficiaire' | 'admin';
+
+interface AppUser {
+  id: string;
   email: string;
-  role: 'sender' | 'receiver';
+  role: FrontendRole;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, role: 'sender' | 'receiver') => boolean;
-  signup: (email: string, password: string, role: 'sender' | 'receiver') => boolean;
-  logout: () => void;
-  // This is for simulation only, in a real app, do not store plain passwords
-  mockUsers: { email: string; password: string; role: 'sender' | 'receiver' }[]; 
+  /** True while the initial session check is in flight. Pages should hold
+   *  off any redirect-decision until `loading === false`. */
+  loading: boolean;
+  login: (email: string, password: string, role: FrontendRole) => Promise<boolean>;
+  signup: (email: string, password: string, role: FrontendRole) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function dbToFrontendRole(db: DbRole): FrontendRole {
+  return db === 'beneficiaire' ? 'receiver' : 'sender';
+}
+function frontendToDbRole(fe: FrontendRole): DbRole {
+  return fe === 'receiver' ? 'beneficiaire' : 'expediteur';
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [mockUsers, setMockUsers] = useState<{ email: string; password: string; role: 'sender' | 'receiver' }[]>([]);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    // Load from localStorage on initial render
-    const storedUser = localStorage.getItem('simulatedUser');
-    const storedMockUsers = localStorage.getItem('simulatedMockUsers');
-
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+  // Read the profile row that the SQL trigger created at signup. We do this
+  // to know the user's role (expediteur / beneficiaire) so the sidebar and
+  // protected pages can render the right variant.
+  const hydrateFromSupabaseUser = async (authUser: SupaUser) => {
+    let role: FrontendRole = 'sender';
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single();
+      if (profile?.role) role = dbToFrontendRole(profile.role as DbRole);
+    } catch {
+      // Trigger may not have inserted yet on first signup — fall back to default
     }
-    if (storedMockUsers) {
-      setMockUsers(JSON.parse(storedMockUsers));
-    } else {
-      // Add a default mock user if none exist
-      const defaultUser = { email: 'test@example.com', password: 'password', role: 'sender' };
-      setMockUsers([defaultUser]);
-      localStorage.setItem('simulatedMockUsers', JSON.stringify([defaultUser]));
-    }
-  }, []);
-
-  const login = (email: string, password: string, role: 'sender' | 'receiver') => {
-    const foundUser = mockUsers.find(
-      (u) => u.email === email && u.password === password && u.role === role
-    );
-    if (foundUser) {
-      const loggedInUser = { email: foundUser.email, role: foundUser.role };
-      setUser(loggedInUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('simulatedUser', JSON.stringify(loggedInUser));
-      return true;
-    }
-    return false;
+    setUser({
+      id: authUser.id,
+      email: authUser.email ?? '',
+      role,
+    });
   };
 
-  const signup = (email: string, password: string, role: 'sender' | 'receiver') => {
-    const userExists = mockUsers.some((u) => u.email === email);
-    if (userExists) {
-      alert('User with this email already exists!');
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (session?.user) {
+        hydrateFromSupabaseUser(session.user).finally(
+          () => mounted && setLoading(false),
+        );
+      } else {
+        setLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        if (session?.user) {
+          hydrateFromSupabaseUser(session.user);
+        } else {
+          setUser(null);
+        }
+      },
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.error('Login failed:', error.message);
       return false;
     }
-
-    const newUser = { email, password, role };
-    const updatedMockUsers = [...mockUsers, newUser];
-    setMockUsers(updatedMockUsers);
-    localStorage.setItem('simulatedMockUsers', JSON.stringify(updatedMockUsers));
-
-    // Automatically log in the new user
-    setUser({ email, role });
-    setIsAuthenticated(true);
-    localStorage.setItem('simulatedUser', JSON.stringify({ email, role }));
     return true;
   };
 
-  const logout = () => {
+  const signup = async (
+    email: string,
+    password: string,
+    role: FrontendRole,
+  ): Promise<boolean> => {
+    const dbRole = frontendToDbRole(role);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { role: dbRole } },
+    });
+    if (error || !data.user) {
+      console.error('Signup failed:', error?.message);
+      return false;
+    }
+    // The SQL trigger handle_new_user creates the profile with the default
+    // role 'expediteur'. If the user picked the bénéficiaire role, update it.
+    if (dbRole !== 'expediteur') {
+      await supabase.from('profiles').update({ role: dbRole }).eq('id', data.user.id);
+    }
+    return true;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('simulatedUser');
     router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, signup, logout, mockUsers }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        signup,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

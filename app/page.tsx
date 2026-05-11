@@ -16,31 +16,36 @@ import { useRouter } from "next/navigation";
 
 export default function OnboardingPage() {
   const [role, setRole] = useState<"sender" | "receiver">("sender");
-  const [email, setEmail] = useState("aminata.diallo@gmail.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoginMode, setIsLoginMode] = useState(true); // true for login, false for signup
 
-  const { isAuthenticated, login, signup } = useAuth();
+  const { isAuthenticated, loading, login, signup } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, router]);
+  }, [loading, isAuthenticated, router]);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (isLoginMode) {
-      const success = login(email, password, role);
+    setSubmitting(true);
+    try {
+      const success = isLoginMode
+        ? await login(email, password, role)
+        : await signup(email, password, role);
       if (!success) {
-        alert("Login failed. Check your credentials and role, or sign up.");
+        alert(
+          isLoginMode
+            ? "Connexion échouée. Vérifiez vos identifiants."
+            : "Inscription échouée. L'utilisateur existe peut-être déjà.",
+        );
       }
-    } else {
-      const success = signup(email, password, role);
-      if (!success) {
-        alert("Signup failed. User might already exist.");
-      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -206,8 +211,15 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: "6px" }} type="submit">
-              {isLoginMode ? "Se connecter" : "Créer mon compte"}
+            <button
+              className="btn btn-primary btn-lg btn-block"
+              style={{ marginTop: "6px" }}
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting
+                ? (isLoginMode ? "Connexion…" : "Création…")
+                : (isLoginMode ? "Se connecter" : "Créer mon compte")}
               <LogoIcon style={{ width: "18px", height: "18px" }} />
             </button>
           </form>

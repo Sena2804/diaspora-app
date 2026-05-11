@@ -13,7 +13,17 @@ import { createServerClient } from '@supabase/ssr';
  * themselves and return JSON errors instead of HTTP redirects.
  */
 
-const PROTECTED_PREFIXES = ['/expediteur', '/historique', '/retrait', '/wallet'];
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/transfer',
+  '/recipients',
+  '/history',
+  '/recharge',
+  '/schedule',
+  '/settings',
+  '/compare',
+  '/blockchain',
+];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -54,7 +64,7 @@ export async function proxy(request: NextRequest) {
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = '/';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
