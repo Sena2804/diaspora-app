@@ -16,7 +16,7 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedRequest } from '@/lib/supabase/auth';
 import { getPlatformPublic, memoForTransfert } from '@/lib/stellar';
 
 // EUR pegged to XOF at 655.957. Our fee is 0.2% of the EUR amount.
@@ -33,12 +33,11 @@ function errorResponse(code: string, message: string, status: number) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return errorResponse('UNAUTHENTICATED', 'Session requise.', 401);
+  const authed = await getAuthedRequest(request);
+  if (!authed) {
+    return errorResponse('UNAUTHENTICATED', 'Session ou Bearer token requis.', 401);
   }
+  const { user, supabase } = authed;
 
   let body: unknown;
   try {
@@ -120,12 +119,11 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return errorResponse('UNAUTHENTICATED', 'Session requise.', 401);
+  const authed = await getAuthedRequest(request);
+  if (!authed) {
+    return errorResponse('UNAUTHENTICATED', 'Session ou Bearer token requis.', 401);
   }
+  const { supabase } = authed;
 
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Number(searchParams.get('limit') ?? 20), 100);
