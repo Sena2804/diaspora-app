@@ -20,18 +20,30 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const navItems = [
-    { label: "Tableau de bord", icon: DashboardIcon, href: "/dashboard", badge: null },
-    { label: "Nouvel envoi", icon: SendIcon, href: "/transfer", badge: null },
-    { label: "Historique", icon: HistoryIcon, href: "/history", badge: "12" },
-    { label: "Destinataires", icon: UsersIcon, href: "/recipients", badge: null },
-  ];
+  const isReceiver = user?.role === "receiver";
 
-  const toolItems = [
-    { label: "Comparateur frais", icon: CompareIcon, href: "/compare" },
-    { label: "Mes preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
-    { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
-  ];
+  const navItems = isReceiver
+    ? [
+        { label: "Mon portefeuille", icon: DashboardIcon, href: "/wallet", badge: null },
+        { label: "Historique reçus", icon: HistoryIcon, href: "/history", badge: null },
+      ]
+    : [
+        { label: "Tableau de bord", icon: DashboardIcon, href: "/dashboard", badge: null },
+        { label: "Nouvel envoi", icon: SendIcon, href: "/transfer", badge: null },
+        { label: "Historique", icon: HistoryIcon, href: "/history", badge: null },
+        { label: "Destinataires", icon: UsersIcon, href: "/recipients", badge: null },
+      ];
+
+  const toolItems = isReceiver
+    ? [
+        { label: "Preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
+        { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
+      ]
+    : [
+        { label: "Comparateur frais", icon: CompareIcon, href: "/compare" },
+        { label: "Mes preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
+        { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
+      ];
 
   const getInitials = (email: string | undefined) => {
     if (!email) return "??";
@@ -48,7 +60,7 @@ export function Sidebar() {
       </div>
       
       <nav className="nav-group">
-        <span className="nav-label">Expéditeur</span>
+        <span className="nav-label">{isReceiver ? "Bénéficiaire" : "Expéditeur"}</span>
         {navItems.map((item) => (
           <Link 
             key={item.href} 
@@ -80,7 +92,7 @@ export function Sidebar() {
         <div className="avatar">{getInitials(user?.email)}</div>
         <div className="info">
           <div className="name">{user?.email.split('@')[0]}</div>
-          <div className="meta">Paris · {user?.role === 'sender' ? 'diaspora' : 'bénéficiaire'}</div>
+          <div className="meta">{user?.role === 'sender' ? 'Diaspora · Expéditeur' : 'Bénéficiaire · Bénin'}</div>
         </div>
         <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <ChevronRight style={{ width: "14px", height: "14px", color: "var(--text-tertiary)" }} />

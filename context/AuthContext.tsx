@@ -19,6 +19,7 @@ interface AppUser {
   id: string;
   email: string;
   role: FrontendRole;
+  phone: string | null;
 }
 
 interface AuthContextType {
@@ -28,7 +29,12 @@ interface AuthContextType {
    *  off any redirect-decision until `loading === false`. */
   loading: boolean;
   login: (email: string, password: string, role: FrontendRole) => Promise<boolean>;
-  signup: (email: string, password: string, role: FrontendRole) => Promise<boolean>;
+  signup: (
+    email: string,
+    password: string,
+    role: FrontendRole,
+    phone?: string,
+  ) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -52,13 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // protected pages can render the right variant.
   const hydrateFromSupabaseUser = async (authUser: SupaUser) => {
     let role: FrontendRole = 'sender';
+    let phone: string | null = null;
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, phone')
         .eq('id', authUser.id)
         .single();
       if (profile?.role) role = dbToFrontendRole(profile.role as DbRole);
+      phone = profile?.phone ?? null;
     } catch {
       // Trigger may not have inserted yet on first signup — fall back to default
     }
@@ -66,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       id: authUser.id,
       email: authUser.email ?? '',
       role,
+      phone,
     });
   };
 
@@ -114,21 +123,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string,
     password: string,
     role: FrontendRole,
+    phone?: string,
   ): Promise<boolean> => {
     const dbRole = frontendToDbRole(role);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { role: dbRole } },
+      options: { data: { role: dbRole, phone: phone ?? null } },
     });
     if (error || !data.user) {
       console.error('Signup failed:', error?.message);
       return false;
     }
-    // The SQL trigger handle_new_user creates the profile with the default
-    // role 'expediteur'. If the user picked the bénéficiaire role, update it.
-    if (dbRole !== 'expediteur') {
-      await supabase.from('profiles').update({ role: dbRole }).eq('id', data.user.id);
+    // The SQL trigger creates the profile with default role 'expediteur'.
+    // Write back the actual role + phone the user picked.
+    const updates: { role?: DbRole; phone?: string } = {};
+    if (dbRole !== 'expediteur') updates.role = dbRole;
+    if (phone) updates.phone = phone;
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('profiles').update(updates).eq('id', data.user.id);
     }
     return true;
   };

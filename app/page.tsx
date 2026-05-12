@@ -18,25 +18,30 @@ export default function OnboardingPage() {
   const [role, setRole] = useState<"sender" | "receiver">("sender");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [isLoginMode, setIsLoginMode] = useState(true); // true for login, false for signup
 
-  const { isAuthenticated, loading, login, signup } = useAuth();
+  const { isAuthenticated, loading, login, signup, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      router.push("/dashboard");
+    if (!loading && isAuthenticated && user) {
+      router.push(user.role === "receiver" ? "/wallet" : "/dashboard");
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, user, router]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!isLoginMode && role === "receiver" && !phone.trim()) {
+      alert("Le numéro de téléphone est requis pour recevoir des transferts.");
+      return;
+    }
     setSubmitting(true);
     try {
       const success = isLoginMode
         ? await login(email, password, role)
-        : await signup(email, password, role);
+        : await signup(email, password, role, phone.trim() || undefined);
       if (!success) {
         alert(
           isLoginMode
@@ -190,6 +195,23 @@ export default function OnboardingPage() {
                 />
               </div>
             </div>
+            {!isLoginMode && role === "receiver" && (
+              <div className="field">
+                <label>Numéro Mobile Money (format +229…)</label>
+                <div className="input">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+22997123456"
+                    required
+                  />
+                </div>
+                <span className="dim" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
+                  Ce numéro reliera votre compte aux transferts entrants.
+                </span>
+              </div>
+            )}
             <div className="field">
               <label style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Mot de passe</span>
