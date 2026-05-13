@@ -50,10 +50,9 @@ const STATUS_COLOR: Record<Status, { bg: string; fg: string }> = {
   failed: { bg: "rgba(239,68,68,0.16)", fg: "#b91c1c" },
 };
 
-// Statuses where the receiver can trigger a withdraw. We're permissive in
-// MVP — once Stellar verification is wired (J3) the rule will be tightened
-// to stellar_received only.
-const WITHDRAWABLE: Status[] = ["pending", "stellar_pending", "stellar_received"];
+// The receiver can only withdraw once the sender has confirmed the Stellar
+// payment. Earlier statuses show as "waiting for sender".
+const WITHDRAWABLE: Status[] = ["stellar_received"];
 
 export default function WalletPage() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -87,7 +86,21 @@ export default function WalletPage() {
 
   useEffect(() => {
     if (isAuthenticated) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // Live polling: while at least one transfert is mid-flight (momo_initiated),
+  // re-fetch /api/inbox every 3 seconds so the receiver sees the status flip
+  // to "completed" without manual refresh.
+  useEffect(() => {
+    const hasInFlight = items.some((t) => t.status === "momo_initiated");
+    if (!hasInFlight) return;
+    const id = window.setInterval(() => {
+      refresh();
+    }, 3000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   async function withdraw(id: string) {
     setWithdrawing(id);

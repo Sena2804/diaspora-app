@@ -155,5 +155,36 @@ export async function POST(
     return errorResponse('UPDATE_FAILED', updateErr.message, 500);
   }
 
+  // Demo mode auto-completion: in real life Kkiapay's webhook flips the
+  // status to 'completed'. In mock/demo we never receive that webhook, so
+  // we schedule a server-side timer to do it ourselves after 6 seconds.
+  // This works because the Next.js dev process keeps the timer alive.
+  if (provider.name === 'mock') {
+    setTimeout(async () => {
+      try {
+        const adminLate = createAdminClient();
+        // Re-check current state — user may have done something in between.
+        const { data: current } = await adminLate
+          .from('transferts')
+          .select('status, timeline')
+          .eq('id', transfert.id)
+          .single<{ status: string; timeline: Array<{ step: string; status: string; ts: string }> }>();
+        if (current?.status !== 'momo_initiated') return;
+        const tl = Array.isArray(current.timeline) ? [...current.timeline] : [];
+        tl.push({ step: 'completed', status: 'ok', ts: new Date().toISOString() });
+        await adminLate
+          .from('transferts')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            timeline: tl,
+          })
+          .eq('id', transfert.id);
+      } catch (err) {
+        console.error('[mock auto-complete] failed:', err);
+      }
+    }, 6000);
+  }
+
   return NextResponse.json(updated, { status: 200 });
 }

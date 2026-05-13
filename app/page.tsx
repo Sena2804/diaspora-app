@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, FormEvent, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, FormEvent } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import styles from "./onboarding.module.css";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -18,17 +17,11 @@ export default function OnboardingPage() {
   const [phone, setPhone] = useState("");
   const [isLoginMode, setIsLoginMode] = useState(true); // true for login, false for signup
 
-  const { isAuthenticated, loading, login, signup, user } = useAuth();
+  const { isAuthenticated, loading, login, signup, logout, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const toast = useToast();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && isAuthenticated && user) {
-      router.push(user.role === "receiver" ? "/wallet" : "/dashboard");
-    }
-  }, [loading, isAuthenticated, user, router]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -38,17 +31,19 @@ export default function OnboardingPage() {
     }
     setSubmitting(true);
     try {
-      const success = isLoginMode
+      const result = isLoginMode
         ? await login(email, password, role)
         : await signup(email, password, role, phone.trim() || undefined);
-      if (!success) {
-        toast.error(
-          isLoginMode
-            ? "Connexion échouée. Vérifiez vos identifiants."
-            : "Inscription échouée. L'utilisateur existe peut-être déjà.",
-        );
+      if (!result.ok) {
+        toast.error(result.message);
+        // If signup failed because user exists, suggest switching to login
+        if (result.code === "user_already_exists") {
+          setTimeout(() => setIsLoginMode(true), 400);
+        }
       } else if (!isLoginMode) {
         toast.success("Bienvenue ! Compte créé avec succès.");
+      } else {
+        toast.success("Connexion réussie.");
       }
     } finally {
       setSubmitting(false);
@@ -151,6 +146,42 @@ export default function OnboardingPage() {
 
       {/* ════ Auth side ════ */}
       <section className={styles.authSide}>
+        {!loading && isAuthenticated && user ? (
+          <div className={styles.authCard}>
+            <span className="eyebrow accent">Déjà connecté</span>
+            <h2 style={{ fontSize: "26px", fontWeight: 700, letterSpacing: "-0.03em", margin: "8px 0 6px" }}>
+              Vous êtes connecté
+            </h2>
+            <p style={{ color: "var(--text-tertiary)", fontSize: "14px", margin: "0 0 22px" }}>
+              Connecté en tant que{" "}
+              <strong style={{ color: "var(--text-primary)" }}>{user.email}</strong>
+              {" — "}
+              {user.role === "receiver" ? "Bénéficiaire" : "Expéditeur"}.
+            </p>
+            <div style={{ display: "grid", gap: 10 }}>
+              <button
+                className="btn btn-primary btn-lg btn-block"
+                onClick={() => router.push(user.role === "receiver" ? "/wallet" : "/dashboard")}
+              >
+                Continuer vers {user.role === "receiver" ? "mon portefeuille" : "mon tableau de bord"}
+              </button>
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={async () => {
+                  await logout();
+                  toast.info("Déconnecté. Vous pouvez créer un autre compte.");
+                }}
+              >
+                Se déconnecter pour changer de compte
+              </button>
+            </div>
+            <div className={styles.authFoot} style={{ marginTop: 20 }}>
+              <span className="dim" style={{ fontSize: 11 }}>
+                Vous ne pouvez créer un autre compte qu'après déconnexion.
+              </span>
+            </div>
+          </div>
+        ) : (
         <div className={styles.authCard}>
           <span className="eyebrow accent">Bienvenue</span>
           <h2 style={{ fontSize: "30px", fontWeight: 700, letterSpacing: "-0.03em", margin: "8px 0 6px" }}>
@@ -268,22 +299,31 @@ export default function OnboardingPage() {
             {isLoginMode ? (
               <>
                 Pas encore de compte&nbsp;?{" "}
-                <Link href="#" onClick={() => setIsLoginMode(false)}>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginMode(false)}
+                  style={{ background: "none", border: 0, color: "var(--primary)", cursor: "pointer", padding: 0, font: "inherit" }}
+                >
                   Créer un compte gratuit
-                </Link>
+                </button>
                 <br/>
                 <span className="dim" style={{ fontSize: "11px" }}>KYC simplifié · 2 minutes · GDPR</span>
               </>
             ) : (
               <>
                 Déjà un compte&nbsp;?{" "}
-                <Link href="#" onClick={() => setIsLoginMode(true)}>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginMode(true)}
+                  style={{ background: "none", border: 0, color: "var(--primary)", cursor: "pointer", padding: 0, font: "inherit" }}
+                >
                   Se connecter
-                </Link>
+                </button>
               </>
             )}
           </div>
         </div>
+        )}
       </section>
     </main>
   );

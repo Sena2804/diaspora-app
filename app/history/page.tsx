@@ -65,14 +65,31 @@ export default function HistoryPage() {
     if (!loading && !isAuthenticated) router.push("/");
   }, [loading, isAuthenticated, router]);
 
+  async function refresh() {
+    try {
+      const r = await fetch("/api/transferts?limit=50");
+      const data = (await r.json()) as { items?: Transfert[] };
+      setItems(data.items ?? []);
+    } catch {
+      setItems([]);
+    }
+  }
+
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch("/api/transferts?limit=50")
-      .then((r) => r.json())
-      .then((data: { items?: Transfert[] }) => setItems(data.items ?? []))
-      .catch(() => setItems([]))
-      .finally(() => setFetching(false));
+    refresh().finally(() => setFetching(false));
   }, [isAuthenticated]);
+
+  // Live polling while a transfert is mid-flight, so the sender sees
+  // status flow from stellar_received → momo_initiated → completed.
+  useEffect(() => {
+    const hasInFlight = items.some((t) =>
+      ["pending", "stellar_pending", "stellar_received", "momo_initiated"].includes(t.status),
+    );
+    if (!hasInFlight) return;
+    const id = window.setInterval(refresh, 4000);
+    return () => window.clearInterval(id);
+  }, [items]);
 
   if (loading || !isAuthenticated) return null;
 

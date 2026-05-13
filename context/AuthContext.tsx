@@ -22,19 +22,32 @@ interface AppUser {
   phone: string | null;
 }
 
+export type AuthResult =
+  | { ok: true }
+  | { ok: false; code: AuthErrorCode; message: string };
+
+export type AuthErrorCode =
+  | "invalid_credentials"
+  | "user_already_exists"
+  | "weak_password"
+  | "email_not_confirmed"
+  | "rate_limited"
+  | "network"
+  | "unknown";
+
 interface AuthContextType {
   user: AppUser | null;
   isAuthenticated: boolean;
   /** True while the initial session check is in flight. Pages should hold
    *  off any redirect-decision until `loading === false`. */
   loading: boolean;
-  login: (email: string, password: string, role: FrontendRole) => Promise<boolean>;
+  login: (email: string, password: string, role: FrontendRole) => Promise<AuthResult>;
   signup: (
     email: string,
     password: string,
     role: FrontendRole,
     phone?: string,
-  ) => Promise<boolean>;
+  ) => Promise<AuthResult>;
   logout: () => Promise<void>;
 }
 
@@ -110,13 +123,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const classifySupabaseError = (msg: string | undefined): AuthErrorCode => {
+    const m = (msg ?? '').toLowerCase();
+    if (m.includes('invalid login') || m.includes('invalid credentials')) return 'invalid_credentials';
+    if (m.includes('already registered') || m.includes('already been registered') || m.includes('user already exists')) return 'user_already_exists';
+    if (m.includes('password should be') || m.includes('weak password')) return 'weak_password';
+    if (m.includes('email not confirmed') || m.includes('not confirmed')) return 'email_not_confirmed';
+    if (m.includes('rate limit') || m.includes('too many')) return 'rate_limited';
+    if (m.includes('fetch') || m.includes('network')) return 'network';
+    return 'unknown';
+  };
+
+  const humanMessage = (code: AuthErrorCode): string => {
+    switch (code) {
+      case 'invalid_credentials':
+        return "Email ou mot de passe incorrect.";
+      case 'user_already_exists':
+        return "Un compte existe déjà avec cet email. Connectez-vous plutôt.";
+      case 'weak_password':
+        return "Mot de passe trop court (6 caractères minimum).";
+      case 'email_not_confirmed':
+        return "Email pas encore confirmé. Vérifiez votre boîte de réception.";
+      case 'rate_limited':
+        return "Trop de tentatives. Réessayez dans une minute.";
+      case 'network':
+        return "Impossible de joindre le serveur. Vérifiez votre connexion.";
+      default:
+        return "Une erreur inattendue est survenue.";
+    }
+  };
+
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      console.error('Login failed:', error.message);
-      return false;
+      const code = classifySupabaseError(error.message);
+      return { ok: false, code, message: humanMessage(code) };
     }
-    return true;
+    return { ok: true };
   };
 
   const signup = async (
@@ -124,7 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     role: FrontendRole,
     phone?: string,
-  ): Promise<boolean> => {
+  ): Promise<AuthResult> => {
     const dbRole = frontendToDbRole(role);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -132,8 +175,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       options: { data: { role: dbRole, phone: phone ?? null } },
     });
     if (error || !data.user) {
-      console.error('Signup failed:', error?.message);
-      return false;
+      const code = classifySupabaseError(error?.message);
+      return { ok: false, code, message: humanMessage(code) };
     }
     // The SQL trigger creates the profile with default role 'expediteur'.
     // Write back the actual role + phone the user picked.
@@ -143,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (Object.keys(updates).length > 0) {
       await supabase.from('profiles').update(updates).eq('id', data.user.id);
     }
-    return true;
+    return { ok: true };
   };
 
   const logout = async () => {

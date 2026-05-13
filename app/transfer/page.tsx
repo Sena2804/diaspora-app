@@ -137,63 +137,12 @@ export default function TransferPage() {
   }
 
   if (created) {
-    const selected = beneficiaires.find((b) => b.id === selectedId);
     return (
-      <DashboardShell title="Transfert créé" subtitle="Étape suivante : signer la transaction Stellar.">
-        <div style={{ display: "grid", gap: 20, maxWidth: 720 }}>
-          <Section>
-            <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Transfert</div>
-            <div className="mono" style={{ fontSize: 13, marginTop: 4 }}>{created.id}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
-              <Field label="Bénéficiaire">{selected?.full_name ?? "—"}</Field>
-              <Field label="Téléphone">{selected?.phone ?? "—"}</Field>
-              <Field label="Montant débité">{created.amount_eur.toFixed(2)} EUR</Field>
-              <Field label="Frais (0,2 %)">{created.fee_eur.toFixed(2)} EUR</Field>
-              <Field label="Reçu par le bénéficiaire">
-                <strong style={{ fontSize: 18 }}>{created.amount_xof.toLocaleString("fr-FR")} XOF</strong>
-              </Field>
-              <Field label="Statut">
-                <span className="pill primary" style={{ textTransform: "uppercase" }}>{created.status}</span>
-              </Field>
-            </div>
-          </Section>
-
-          <Section accent>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
-              Payload à signer côté wallet
-            </div>
-            <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 14px" }}>
-              Connectez Freighter pour signer automatiquement (J3). En attendant, voici les
-              paramètres exacts à reproduire sur Stellar Laboratory&nbsp;:
-            </p>
-            <div style={{ display: "grid", gap: 10 }}>
-              <Field label="Destination (wallet plateforme)">
-                <span className="mono" style={{ fontSize: 12, wordBreak: "break-all" }}>
-                  {created.payment.destination}
-                </span>
-              </Field>
-              <Field label="Asset">{created.payment.asset} testnet</Field>
-              <Field label="Montant à envoyer">
-                <span className="mono">{created.payment.amount} USDC</span>
-              </Field>
-              <Field label="Memo (MEMO_TEXT)">
-                <span className="mono" style={{ fontSize: 12 }}>{created.payment.memo}</span>
-              </Field>
-            </div>
-          </Section>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/history" className="btn btn-ghost">Voir l'historique</Link>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => { setCreated(null); setAmount(200); }}
-            >
-              Nouveau transfert
-            </button>
-          </div>
-        </div>
-      </DashboardShell>
+      <ConfirmTransfertView
+        created={created}
+        beneficiaire={beneficiaires.find((b) => b.id === selectedId) ?? null}
+        onReset={() => { setCreated(null); setAmount(200); }}
+      />
     );
   }
 
@@ -363,5 +312,129 @@ function TextField({
         style={{ padding: "10px 12px" }}
       />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// Confirmation screen — separate component so we can have
+// its own state (signing/signed) without polluting the form.
+// ─────────────────────────────────────────────────────────
+interface ConfirmViewProps {
+  created: CreatedTransfert;
+  beneficiaire: Beneficiaire | null;
+  onReset: () => void;
+}
+
+function ConfirmTransfertView({ created, beneficiaire, onReset }: ConfirmViewProps) {
+  const toast = useToast();
+  const [signing, setSigning] = React.useState(false);
+  const [status, setStatus] = React.useState<string>(created.status);
+  const [stellarHash, setStellarHash] = React.useState<string | null>(null);
+
+  async function confirmStellarSignature() {
+    setSigning(true);
+    try {
+      const res = await fetch(`/api/transferts/${created.id}/submit-stellar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}), // demo mode: no tx_hash, backend will accept
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error?.message ?? "Échec de la confirmation Stellar.");
+        return;
+      }
+      setStatus(data.status);
+      setStellarHash(data.stellar_tx_hash);
+      toast.success("Paiement Stellar confirmé. Le bénéficiaire peut retirer maintenant.");
+    } finally {
+      setSigning(false);
+    }
+  }
+
+  const isConfirmed = status === "stellar_received" || status === "momo_initiated" || status === "completed";
+
+  return (
+    <DashboardShell title="Transfert créé" subtitle={isConfirmed ? "Paiement confirmé. Le bénéficiaire peut retirer." : "Étape suivante : signer la transaction Stellar."}>
+      <div style={{ display: "grid", gap: 20, maxWidth: 720 }}>
+        <Section>
+          <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Transfert</div>
+          <div className="mono" style={{ fontSize: 13, marginTop: 4 }}>{created.id}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
+            <Field label="Bénéficiaire">{beneficiaire?.full_name ?? "—"}</Field>
+            <Field label="Téléphone">{beneficiaire?.phone ?? "—"}</Field>
+            <Field label="Montant débité">{created.amount_eur.toFixed(2)} EUR</Field>
+            <Field label="Frais (0,2 %)">{created.fee_eur.toFixed(2)} EUR</Field>
+            <Field label="Reçu par le bénéficiaire">
+              <strong style={{ fontSize: 18 }}>{created.amount_xof.toLocaleString("fr-FR")} XOF</strong>
+            </Field>
+            <Field label="Statut">
+              <span
+                className={isConfirmed ? "pill" : "pill primary"}
+                style={{
+                  textTransform: "uppercase",
+                  background: isConfirmed ? "rgba(34,197,94,0.15)" : undefined,
+                  color: isConfirmed ? "#15803d" : undefined,
+                }}
+              >
+                {status}
+              </span>
+            </Field>
+          </div>
+          {stellarHash && (
+            <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: "var(--bg-base)", fontSize: 12 }}>
+              <div style={{ color: "var(--text-tertiary)", marginBottom: 4 }}>Hash Stellar</div>
+              <div className="mono" style={{ wordBreak: "break-all" }}>{stellarHash}</div>
+            </div>
+          )}
+        </Section>
+
+        {!isConfirmed && (
+          <Section accent>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
+              Signature de la transaction Stellar
+            </div>
+            <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 14px" }}>
+              En production, votre wallet (Freighter / Lobstr) signe automatiquement. Pour la démo,
+              cliquez ci-dessous pour simuler la signature et passer à l'étape suivante.
+            </p>
+            <details style={{ marginBottom: 14 }}>
+              <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
+                Voir les paramètres on-chain
+              </summary>
+              <div style={{ display: "grid", gap: 8, marginTop: 8, padding: 12, background: "var(--bg-base)", borderRadius: 8 }}>
+                <Field label="Destination">
+                  <span className="mono" style={{ fontSize: 11, wordBreak: "break-all" }}>
+                    {created.payment.destination}
+                  </span>
+                </Field>
+                <Field label="Asset">{created.payment.asset} testnet</Field>
+                <Field label="Montant">
+                  <span className="mono">{created.payment.amount} USDC</span>
+                </Field>
+                <Field label="Memo">
+                  <span className="mono" style={{ fontSize: 11 }}>{created.payment.memo}</span>
+                </Field>
+              </div>
+            </details>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg btn-block"
+              onClick={confirmStellarSignature}
+              disabled={signing}
+            >
+              {signing ? (<><Spinner size={16} />Confirmation…</>) : "Confirmer la signature Stellar (démo)"}
+            </button>
+          </Section>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Link href="/history" className="btn btn-ghost">Voir l'historique</Link>
+          <button type="button" className="btn btn-primary" onClick={onReset}>
+            Nouveau transfert
+          </button>
+        </div>
+      </div>
+    </DashboardShell>
   );
 }
