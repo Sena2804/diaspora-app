@@ -60,7 +60,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
       <div className="brand" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
           <div className="logo">
-            <LogoIcon style={{ width: "18px", height: "18px", color: "var(--bg-base)" }} />
+            <Link href="/"><LogoIcon style={{ width: "18px", height: "18px", color: "var(--bg-base)" }} /></Link>
           </div>
           <span className="name">Diaspora<span>Connect</span></span>
         </div>

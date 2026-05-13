@@ -133,7 +133,7 @@ export default function WalletPage() {
 
   return (
     <DashboardShell
-      title={`Bonjour ${user?.email.split("@")[0] ?? ""} 👋`}
+      title={`Bonjour ${user?.email.split("@")[0] ?? ""}`}
       subtitle={
         noPhoneWarning
           ? "Renseignez votre numéro Mobile Money dans Paramètres pour commencer à recevoir."
@@ -178,11 +178,11 @@ export default function WalletPage() {
               fontSize: 13,
             }}
           >
-            ⚠️ Votre numéro Mobile Money n'est pas encore enregistré.{" "}
+            ⚠️ Votre numéro Mobile Money n&apo;est pas encore enregistré.{" "}
             <a href="/settings" style={{ color: "inherit", textDecoration: "underline" }}>
               Ajoutez-le dans Paramètres
             </a>{" "}
-            pour relier votre compte aux transferts qu'on vous envoie.
+            pour relier votre compte aux transferts qu&apo;on vous envoie.
           </div>
         )}
 

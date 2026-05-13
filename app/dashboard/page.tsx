@@ -214,7 +214,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className={styles.v}>{transferts.length}</div>
-            <div className={styles.delta}>Depuis l'inscription</div>
+            <div className={styles.delta}>Depuis l&apo;inscription</div>
           </div>
           <div className={styles.statTile}>
             <div className={styles.head}>
