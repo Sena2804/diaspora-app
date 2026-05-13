@@ -13,14 +13,33 @@ import { createServerClient } from '@supabase/ssr';
  * themselves and return JSON errors instead of HTTP redirects.
  */
 
-const PROTECTED_PREFIXES = ['/expediteur', '/historique', '/retrait', '/wallet'];
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/transfer',
+  '/recipients',
+  '/history',
+  '/recharge',
+  '/schedule',
+  '/settings',
+  '/compare',
+  '/blockchain',
+  '/wallet',
+];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Bypassing auth check if Supabase is not configured
+  if (!supabaseUrl || !supabaseKey) {
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -46,7 +65,7 @@ export async function proxy(request: NextRequest) {
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = '/';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }

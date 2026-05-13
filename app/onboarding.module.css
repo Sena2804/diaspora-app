@@ -1,0 +1,189 @@
+.onboardingPage {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 1024px) {
+  .onboardingPage {
+    grid-template-columns: 1fr;
+  }
+  .heroSide {
+    display: none;
+  }
+}
+
+.heroSide {
+  position: relative;
+  padding: 36px 56px;
+  background:
+    radial-gradient(700px 500px at 20% 20%, rgba(45,212,191,0.18), transparent 60%),
+    radial-gradient(500px 400px at 90% 80%, rgba(249,115,22,0.16), transparent 60%),
+    linear-gradient(180deg, #07221E 0%, #0A0F1A 100%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.heroSide::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.heroSide > * { position: relative; z-index: 1; }
+
+.authSide {
+  background: var(--bg-canvas);
+  padding: 36px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.authCard { max-width: 440px; width: 100%; margin: 0 auto; }
+
+.brandLine { display: flex; align-items: center; gap: 11px; margin-bottom: 28px; }
+
+.heroHeadline { font-size: 56px; line-height: 1.05; letter-spacing: -0.04em; font-weight: 700; margin: 0 0 24px; max-width: 540px; }
+.ac { color: var(--primary); }
+.ag { color: var(--accent); }
+
+.heroSub { color: var(--text-secondary); font-size: 16px; max-width: 470px; line-height: 1.6; margin: 0 0 36px; }
+
+.impactCard {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  padding: 20px;
+  background: rgba(15,23,33,0.7);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  max-width: 540px;
+}
+
+.item { display: flex; flex-direction: column; gap: 4px; padding: 4px 8px; border-left: 2px solid var(--primary); }
+.item:nth-child(2) { border-color: var(--accent); }
+.item:nth-child(3) { border-color: var(--gold); }
+.item:nth-child(4) { border-color: var(--success); }
+
+.v { font-family: var(--font-mono); font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+.l { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.roleGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 24px; }
+
+.role {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.role.active {
+  border-color: var(--primary);
+  background: linear-gradient(180deg, rgba(45,212,191,0.06), transparent), var(--bg-elevated);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.iconCircle {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.role.accent .iconCircle { background: var(--accent-soft); color: var(--accent); }
+.title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.sub { font-size: 12px; color: var(--text-tertiary); }
+
+.dividerText { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--text-muted); font-size: 11.5px; letter-spacing: 0.10em; text-transform: uppercase; }
+.dividerText::before, .dividerText::after { content: ""; flex: 1; height: 1px; background: var(--border-subtle); }
+
+.btnSocial { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--text-primary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+.btnSocial:hover { border-color: var(--border-strong); background: var(--bg-overlay); }
+
+.authFoot { font-size: 12px; color: var(--text-tertiary); text-align: center; margin-top: 22px; }
+.authFoot a { color: var(--primary); text-decoration: none; font-weight: 500; }
+
+.floatingTx {
+  position: absolute;
+  width: 280px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(15,23,33,0.85);
+  backdrop-filter: blur(12px);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+}
+
+.f1 { top: 220px; right: 80px; transform: rotate(-2deg); }
+.f2 { bottom: 180px; right: 30px; transform: rotate(1.5deg); }
+
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.who { display: flex; align-items: center; gap: 9px; }
+.av { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #2DD4BF, #14B8A6); display: grid; place-items: center; color: #042F2E; font-size: 11px; font-weight: 700; }
+.f2 .who .av { background: linear-gradient(135deg, #F97316, #FBBF24); color: #1a0a02; }
+.name { font-size: 12.5px; font-weight: 600; }
+.meta { font-size: 10.5px; color: var(--text-tertiary); }
+.amount { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.status { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-subtle); font-size: 10.5px; color: var(--success); display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--success); animation: pulse 1.6s infinite; }
+
+@keyframes pulse { 0%,100%{opacity: 1} 50% { opacity: 0.4 } }
+
+/* ───────────────────────────────────────────────────────── */
+/* Light mode : le hero reste sombre (effet dramatique),     */
+/* donc on force le texte clair pour rester lisible.          */
+/* ───────────────────────────────────────────────────────── */
+:global([data-theme="light"]) .heroSide {
+  --text-primary:   rgba(255, 255, 255, 1);
+  --text-secondary: rgba(255, 255, 255, 0.86);
+  --text-tertiary:  rgba(255, 255, 255, 0.66);
+  --text-muted:     rgba(255, 255, 255, 0.5);
+  --border-subtle:  rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+:global([data-theme="light"]) .heroHeadline,
+:global([data-theme="light"]) .heroSub,
+:global([data-theme="light"]) .heroSide .name,
+:global([data-theme="light"]) .impactCard .v {
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx {
+  background: rgba(15, 23, 33, 0.92);
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx .name {
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx .meta {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ───────────────────────────────────────────────────────── */
+/* Floating cards : décoratives, on les retire sur viewports */
+/* étroits pour éviter qu'elles chevauchent le texte.         */
+/* ───────────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .floatingTx { display: none; }
+  .heroHeadline { font-size: 44px; }
+  .heroSide { padding: 32px 36px; }
+}
+@media (max-width: 1100px) {
+  .heroHeadline { font-size: 38px; }
+}
+
+/* ───────────────────────────────────────────────────────── */
+/* Mobile : auth side prend toute la largeur, padding réduit  */
+/* ───────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .authSide { padding: 36px 24px; }
+  .authCard { max-width: 100%; }
+}
+@media (max-width: 480px) {
+  .authSide { padding: 24px 16px; }
+}

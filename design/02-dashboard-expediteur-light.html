@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>02 · Dashboard expéditeur (light) — DiasporaConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/theme.css" />
+<style>
+  .grid-2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .hero-card {
+    padding: 28px;
+    background:
+      radial-gradient(700px 300px at -10% -50%, rgba(45,212,191,0.18), transparent 60%),
+      radial-gradient(500px 300px at 110% 110%, rgba(249,115,22,0.12), transparent 60%),
+      linear-gradient(180deg, var(--bg-surface), var(--bg-elevated));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-2xl);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .hero-card > * { position: relative; z-index: 1; }
+
+  .hero-balance { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+  .hero-balance .value { font-family: var(--font-mono); font-size: 56px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+  .hero-balance .value .currency { color: var(--text-tertiary); font-size: 22px; margin-left: 6px; font-weight: 500; }
+  .hero-balance .label { font-size: 12px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); font-weight: 600; margin-bottom: 6px; }
+
+  .hero-balance .convert {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .actions-row { display: flex; gap: 10px; margin-top: 20px; }
+
+  .stat-tile {
+    padding: 18px;
+    border-radius: var(--r-lg);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+  }
+  .stat-tile .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .stat-tile .head .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); font-weight: 600; }
+  .stat-tile .head .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; }
+  .stat-tile .v { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; }
+  .stat-tile .delta { font-size: 11.5px; margin-top: 4px; display: flex; align-items: center; gap: 4px; color: var(--success); font-family: var(--font-mono); }
+
+  .recent-tx { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); gap: 14px; }
+  .recent-tx:last-child { border: 0; }
+  .recent-tx .av { width: 38px; height: 38px; border-radius: var(--r-full); background: linear-gradient(135deg, #2DD4BF, #14B8A6); display: grid; place-items: center; color: #042F2E; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .recent-tx.t2 .av { background: linear-gradient(135deg, #F97316, #FBBF24); color: #1a0a02; }
+  .recent-tx.t3 .av { background: linear-gradient(135deg, #818CF8, #A78BFA); color: #1e1b4b; }
+  .recent-tx.t4 .av { background: linear-gradient(135deg, #34D399, #10B981); color: #022c22; }
+  .recent-tx .info { flex: 1; min-width: 0; }
+  .recent-tx .name { font-size: 13.5px; font-weight: 600; }
+  .recent-tx .sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+  .recent-tx .right { text-align: right; }
+  .recent-tx .amt { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+  .recent-tx .meta-r { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-family: var(--font-mono); }
+
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .section-head h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .section-head a { font-size: 12px; color: var(--text-tertiary); text-decoration: none; }
+
+  .impact-strip {
+    margin-top: 14px;
+    padding: 14px 18px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(90deg, rgba(45,212,191,0.08), rgba(249,115,22,0.06));
+    border: 1px solid rgba(45,212,191,0.18);
+    display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  }
+  .impact-strip .left { display: flex; align-items: center; gap: 12px; }
+  .impact-strip .ribbon-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--primary-soft); display: grid; place-items: center; color: var(--primary); }
+
+  .chart {
+    height: 90px;
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(45,212,191,0.18) 100%);
+    border-radius: var(--r-md);
+    margin-top: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart svg { width: 100%; height: 100%; }
+
+  .favorite {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+  }
+  .favorite:hover { border-color: var(--border-strong); }
+  .favorite .av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; }
+  .favorite .meta { font-size: 11px; color: var(--text-tertiary); }
+  .favorite .name-line { font-size: 13px; font-weight: 500; }
+
+  /* Light-mode overrides spécifiques à cette page */
+  [data-theme="light"] .hero-card {
+    background:
+      radial-gradient(700px 300px at -10% -50%, rgba(13,148,136,0.10), transparent 60%),
+      radial-gradient(500px 300px at 110% 110%, rgba(234,88,12,0.06), transparent 60%),
+      var(--bg-surface);
+    box-shadow: var(--shadow-md);
+  }
+  [data-theme="light"] .impact-strip {
+    background: linear-gradient(90deg, rgba(13,148,136,0.08), rgba(234,88,12,0.06));
+    border-color: rgba(13,148,136,0.20);
+  }
+  [data-theme="light"] .compare-row.us {
+    background: rgba(13,148,136,0.05);
+    border-radius: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  [data-theme="light"] .chart {
+    background: linear-gradient(180deg, transparent 0%, rgba(13,148,136,0.12) 100%);
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="shell">
+
+  <!-- ════ Sidebar ════ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3l9 9-9 9"/></svg>
+      </div>
+      <span class="name">Diaspora<span>Connect</span></span>
+    </div>
+    <nav class="nav-group">
+      <span class="nav-label">Expéditeur</span>
+      <a class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        Tableau de bord
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+        Nouvel envoi
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Historique
+        <span class="badge">12</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Destinataires
+      </a>
+    </nav>
+    <nav class="nav-group">
+      <span class="nav-label">Outils</span>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+        Comparateur frais
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M9 3v18M3 9h18"/></svg>
+        Mes preuves blockchain
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        Paramètres
+      </a>
+    </nav>
+    <div class="user-card">
+      <div class="avatar">AD</div>
+      <div class="info">
+        <div class="name">Aminata Diallo</div>
+        <div class="meta">Paris · diaspora</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:var(--text-tertiary)"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </aside>
+
+  <!-- ════ Main ════ -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Bonjour Aminata 👋</h1>
+        <div class="sub">Vous avez économisé <span style="color:var(--primary)" class="mono">€87,40</span> de frais ce mois-ci. Voici un résumé.</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-icon" title="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+        </button>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+          Exporter
+        </button>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+          Nouvel envoi
+        </button>
+      </div>
+    </div>
+
+    <!-- Top row : hero balance + 4 stats -->
+    <div class="grid-2">
+      <!-- Hero card -->
+      <div class="hero-card">
+        <div class="hero-balance">
+          <div>
+            <div class="label">Solde wallet</div>
+            <div class="value">2&nbsp;480<span class="currency">USDC</span></div>
+            <div class="convert">≈ €2 296,40 · 1 USDC = 0,9260 €</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+            <span class="pill primary"><span class="dot pulse"></span>Connecté · Stellar Mainnet</span>
+            <span class="hash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71"/></svg>
+              GBKL…JX9F
+            </span>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button class="btn btn-primary btn-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+            Envoyer au Bénin
+          </button>
+          <button class="btn btn-ghost btn-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Recharger
+          </button>
+          <button class="btn btn-ghost btn-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+            Programmer
+          </button>
+        </div>
+
+        <div class="impact-strip">
+          <div class="left">
+            <div class="ribbon-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600">Impact ODD&nbsp;10 — vos économies</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary)">Vs services traditionnels (8–12 % moyen)</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="mono" style="font-size:22px;font-weight:600;color:var(--primary)">€87,40</div>
+            <div style="font-size:11px;color:var(--text-tertiary)" class="mono">7 transferts · ce mois</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs grid -->
+      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="stat-tile">
+          <div class="head">
+            <span class="lbl">Envoyés ce mois</span>
+            <div class="ic" style="background:var(--primary-soft);color:var(--primary)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+          <div class="v">€1 240</div>
+          <div class="delta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="M7 17l10-10M7 7h10v10"/></svg>
+            +18 % vs avril
+          </div>
+        </div>
+        <div class="stat-tile">
+          <div class="head">
+            <span class="lbl">Frais payés</span>
+            <div class="ic" style="background:var(--gold-soft);color:var(--gold)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+          </div>
+          <div class="v">€2,48</div>
+          <div class="delta">0,2 % effectif</div>
+        </div>
+        <div class="stat-tile">
+          <div class="head">
+            <span class="lbl">Délai moyen</span>
+            <div class="ic" style="background:var(--accent-soft);color:var(--accent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+          </div>
+          <div class="v">4,2 s</div>
+          <div class="delta">Stellar testnet</div>
+        </div>
+        <div class="stat-tile">
+          <div class="head">
+            <span class="lbl">Bénéficiaires</span>
+            <div class="ic" style="background:rgba(167,139,250,0.12);color:#A78BFA">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+          </div>
+          <div class="v">5</div>
+          <div class="delta">3 actifs ce mois</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle row : Recent + Compare -->
+    <div class="grid-2" style="margin-top:18px">
+      <div class="card">
+        <div class="section-head">
+          <h3>Transferts récents</h3>
+          <a href="#">Voir tout →</a>
+        </div>
+
+        <div class="recent-tx t1">
+          <div class="av">FK</div>
+          <div class="info">
+            <div class="name">Fatou Kpogan · Cotonou</div>
+            <div class="sub">
+              <span class="mono">→ +229 91 23 45 67</span>
+              · MTN MoMo
+              <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré</span>
+            </div>
+          </div>
+          <div class="right">
+            <div class="amt" style="color:var(--success)">−€100,00</div>
+            <div class="meta-r">65 500 XOF · il y a 2h</div>
+          </div>
+        </div>
+
+        <div class="recent-tx t2">
+          <div class="av">EA</div>
+          <div class="info">
+            <div class="name">Edwige Adjovi · Porto-Novo</div>
+            <div class="sub">
+              <span class="mono">→ +229 96 14 88 02</span>
+              · Moov Money
+              <span class="pill primary" style="padding:1px 7px;font-size:10px"><span class="dot pulse"></span>En attente retrait</span>
+            </div>
+          </div>
+          <div class="right">
+            <div class="amt" style="color:var(--success)">−€200,00</div>
+            <div class="meta-r">131 000 XOF · hier</div>
+          </div>
+        </div>
+
+        <div class="recent-tx t3">
+          <div class="av">SD</div>
+          <div class="info">
+            <div class="name">Salif Dossou · Parakou</div>
+            <div class="sub">
+              <span class="mono">→ +229 97 51 32 19</span>
+              · Celtiis Cash
+              <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré</span>
+            </div>
+          </div>
+          <div class="right">
+            <div class="amt" style="color:var(--success)">−€150,00</div>
+            <div class="meta-r">98 250 XOF · 03/05</div>
+          </div>
+        </div>
+
+        <div class="recent-tx t4">
+          <div class="av">MG</div>
+          <div class="info">
+            <div class="name">Marie Glele · Abomey-Calavi</div>
+            <div class="sub">
+              <span class="mono">→ +229 95 01 77 44</span>
+              · MTN MoMo
+              <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré</span>
+            </div>
+          </div>
+          <div class="right">
+            <div class="amt" style="color:var(--success)">−€50,00</div>
+            <div class="meta-r">32 750 XOF · 01/05</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h3>Vous économisez sur chaque envoi</h3>
+          <span class="pill primary"><span class="dot"></span>Live</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-tertiary);margin:0 0 14px">Pour <span class="mono" style="color:var(--text-primary)">€200</span> envoyés vers le Bénin :</p>
+
+        <div class="compare-row us">
+          <div class="name">
+            <span class="dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor"></span>
+            DiasporaConnect
+          </div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:5%;background:var(--primary)"></div></div>
+          <div class="fee">€0,40</div>
+        </div>
+        <div class="compare-row">
+          <div class="name">Wise</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:38%;background:var(--text-muted)"></div></div>
+          <div class="fee">€7,80</div>
+        </div>
+        <div class="compare-row">
+          <div class="name">Western Union</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:74%;background:var(--accent)"></div></div>
+          <div class="fee">€15,90</div>
+        </div>
+        <div class="compare-row">
+          <div class="name">MoneyGram</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:82%;background:var(--accent)"></div></div>
+          <div class="fee">€18,40</div>
+        </div>
+        <div class="compare-row">
+          <div class="name">Banque classique</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:90%;background:var(--danger)"></div></div>
+          <div class="fee">€22,00</div>
+        </div>
+
+        <div style="margin-top:16px;padding:14px;border-radius:var(--r-md);background:linear-gradient(135deg, var(--primary-soft), transparent);border:1px solid rgba(45,212,191,0.18);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);font-weight:600">Économisé vs Western Union</div>
+            <div class="mono" style="font-size:20px;color:var(--primary);font-weight:600;margin-top:2px">€15,50 · 97 % moins de frais</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;opacity:0.7"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row : Favorites + Activity chart -->
+    <div class="grid-2" style="margin-top:18px">
+      <div class="card">
+        <div class="section-head">
+          <h3>Activité — 30 derniers jours</h3>
+          <span class="muted" style="font-size:12px">€1 240 envoyés</span>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 600 90" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#2DD4BF" stop-opacity="0.6"/>
+                <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M 0 65 Q 50 60 80 50 T 160 35 T 240 45 T 320 25 T 400 30 T 480 18 T 600 15 L 600 90 L 0 90 Z" fill="url(#grad)"/>
+            <path d="M 0 65 Q 50 60 80 50 T 160 35 T 240 45 T 320 25 T 400 30 T 480 18 T 600 15" fill="none" stroke="#2DD4BF" stroke-width="2"/>
+            <circle cx="600" cy="15" r="4" fill="#2DD4BF"/>
+          </svg>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted)">
+          <span>07 avril</span><span>14 avril</span><span>21 avril</span><span>28 avril</span><span>05 mai</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h3>Bénéficiaires favoris</h3>
+          <a href="#">Gérer →</a>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="favorite">
+            <div class="av" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)"></div>
+            <div>
+              <div class="name-line">Fatou Kpogan</div>
+              <div class="meta">+229 91 23 · MTN</div>
+            </div>
+          </div>
+          <div class="favorite">
+            <div class="av" style="background:linear-gradient(135deg,#F97316,#FBBF24)"></div>
+            <div>
+              <div class="name-line">Edwige Adjovi</div>
+              <div class="meta">+229 96 14 · Moov</div>
+            </div>
+          </div>
+          <div class="favorite">
+            <div class="av" style="background:linear-gradient(135deg,#818CF8,#A78BFA)"></div>
+            <div>
+              <div class="name-line">Salif Dossou</div>
+              <div class="meta">+229 97 51 · Celtiis</div>
+            </div>
+          </div>
+          <div class="favorite">
+            <div class="av" style="background:linear-gradient(135deg,#34D399,#10B981)"></div>
+            <div>
+              <div class="name-line">Marie Glele</div>
+              <div class="meta">+229 95 01 · MTN</div>
+            </div>
+          </div>
+          <div class="favorite" style="border-style:dashed;color:var(--text-tertiary);justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="name-line" style="color:inherit">Ajouter un proche</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

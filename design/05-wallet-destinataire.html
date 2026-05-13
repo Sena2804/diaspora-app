@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>05 · Wallet destinataire — DiasporaConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/theme.css" />
+<style>
+  .grid-2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; align-items: start; }
+
+  .balance-card {
+    padding: 30px;
+    background:
+      radial-gradient(700px 320px at -10% -50%, rgba(249,115,22,0.18), transparent 60%),
+      radial-gradient(500px 320px at 110% 110%, rgba(45,212,191,0.12), transparent 60%),
+      linear-gradient(180deg, var(--bg-surface), var(--bg-elevated));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-2xl);
+    overflow: hidden;
+    position: relative;
+  }
+  .balance-card::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .balance-card > * { position: relative; z-index: 1; }
+
+  .balance-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .balance-value {
+    font-family: var(--font-mono);
+    font-size: 64px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--text-primary);
+    margin: 8px 0;
+  }
+  .balance-value .currency { color: var(--text-tertiary); font-size: 24px; margin-left: 6px; font-weight: 500; }
+  .balance-eq { font-family: var(--font-mono); color: var(--text-secondary); font-size: 14px; }
+
+  .pending-strip {
+    margin-top: 20px;
+    padding: 14px 18px;
+    border-radius: var(--r-lg);
+    background: var(--gold-soft);
+    border: 1px dashed rgba(251,191,36,0.30);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pending-strip .left { display: flex; align-items: center; gap: 12px; color: var(--gold); font-size: 13px; font-weight: 500; }
+  .pending-strip .left .ic { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: rgba(251,191,36,0.15); }
+
+  .actions-row { display: flex; gap: 10px; margin-top: 20px; }
+
+  .received-tx { display: flex; align-items: center; padding: 14px 0; gap: 14px; border-bottom: 1px solid var(--border-subtle); }
+  .received-tx:last-child { border-bottom: 0; }
+  .received-tx .av { width: 42px; height: 42px; border-radius: var(--r-full); flex-shrink: 0; display: grid; place-items: center; color: #042F2E; font-weight: 700; font-size: 14px; }
+  .received-tx .info { flex: 1; min-width: 0; }
+  .received-tx .name { font-size: 14px; font-weight: 600; }
+  .received-tx .sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .received-tx .right { text-align: right; flex-shrink: 0; }
+  .received-tx .amt { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--success); }
+  .received-tx .meta-r { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-family: var(--font-mono); }
+
+  .stat-pill { padding: 16px; border-radius: var(--r-lg); background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
+  .stat-pill .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); font-weight: 600; }
+  .stat-pill .val { font-family: var(--font-mono); font-size: 22px; font-weight: 600; letter-spacing: -0.03em; margin-top: 6px; }
+
+  .country-flag { width: 18px; height: 12px; border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 4px; }
+  .flag-fr { background: linear-gradient(90deg,#0055A4 33%,#fff 33%,#fff 66%,#EF4135 66%); }
+  .flag-be { background: linear-gradient(90deg,#000 33%,#FAE042 33%,#FAE042 66%,#EF3340 66%); }
+  .flag-us { background: linear-gradient(0deg, #B22234 50%, #fff 50%); position: relative; }
+  .flag-ci { background: linear-gradient(90deg,#FF8200 33%,#fff 33%,#fff 66%,#009A44 66%); }
+
+  .quickwithdraw {
+    padding: 22px;
+    background: linear-gradient(135deg, rgba(249,115,22,0.10), rgba(45,212,191,0.06));
+    border: 1px solid rgba(249,115,22,0.25);
+    border-radius: var(--r-xl);
+    margin-bottom: 18px;
+  }
+
+  .operator-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .operator { padding: 10px 6px; border-radius: var(--r-md); border: 1px solid var(--border-subtle); background: var(--bg-elevated); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; font-size: 11px; color: var(--text-secondary); }
+  .operator:hover { border-color: var(--border-strong); }
+  .operator .logo {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .operator.mtn .logo { background: #FFCB05; color: #000; }
+  .operator.moov .logo { background: #00549F; color: #fff; }
+  .operator.celtiis .logo { background: #1D7B5A; color: #fff; }
+
+  .ribbon { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: var(--r-full); font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; background: var(--primary-soft); color: var(--primary); }
+  .ribbon.gold { background: var(--gold-soft); color: var(--gold); }
+
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .section-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .section-head a { font-size: 12px; color: var(--text-tertiary); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3l9 9-9 9"/></svg></div>
+      <span class="name">Diaspora<span>Connect</span></span>
+    </div>
+    <nav class="nav-group">
+      <span class="nav-label">Destinataire</span>
+      <a class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+        Mon wallet
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+        Retirer sur Mobile Money
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Transferts reçus
+        <span class="badge">2</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        Paramètres
+      </a>
+    </nav>
+    <div class="user-card">
+      <div class="avatar" style="background:linear-gradient(135deg,#F97316,#FBBF24)">EA</div>
+      <div class="info">
+        <div class="name">Edwige Adjovi</div>
+        <div class="meta">Porto-Novo · 🇧🇯</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:var(--text-tertiary)"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Bonjour Edwige 🌅</h1>
+        <div class="sub">Aminata vous a envoyé <span style="color:var(--accent)">131 100 XOF</span> depuis Paris — il y a 18&nbsp;secondes.</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-icon" style="position:relative">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+          <span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--accent)"></span>
+        </button>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          Filtrer
+        </button>
+        <button class="btn btn-accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+          Retirer
+        </button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- LEFT -->
+      <div style="display:flex;flex-direction:column;gap:18px">
+
+        <!-- Big balance -->
+        <div class="balance-card">
+          <div class="balance-head">
+            <div>
+              <div style="font-size:11px;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-tertiary);font-weight:600">Solde disponible</div>
+              <div class="balance-value">228&nbsp;850<span class="currency">XOF</span></div>
+              <div class="balance-eq">≈ €349,01 · 1 USDC = 605,3 XOF</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+              <span class="ribbon"><span class="dot pulse" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor"></span>Wallet sécurisé</span>
+              <span class="hash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71"/></svg>
+                GBYL…M2QF
+              </span>
+            </div>
+          </div>
+
+          <div class="pending-strip">
+            <div class="left">
+              <div class="ic">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div>
+                <div style="color:var(--gold);font-weight:600">131 100 XOF en attente de retrait</div>
+                <div style="color:var(--text-tertiary);font-size:11.5px;margin-top:2px">Reçu d'Aminata · arrive sur Moov Money en ~12 s</div>
+              </div>
+            </div>
+            <button class="btn btn-accent" style="font-size:12px;padding:8px 14px">
+              Retirer maintenant
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <div class="actions-row">
+            <button class="btn btn-primary btn-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              Retirer sur MoMo
+            </button>
+            <button class="btn btn-ghost btn-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>
+              Demander à un proche
+            </button>
+            <button class="btn btn-ghost btn-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
+              Mon QR Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick withdraw card -->
+        <div class="quickwithdraw">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div>
+              <span class="eyebrow accent">Retrait express</span>
+              <h3 style="margin:6px 0 4px;font-size:18px;letter-spacing:-0.02em">Retirez en un clic vers votre Mobile Money habituel</h3>
+              <p style="margin:0;font-size:12.5px;color:var(--text-secondary)">131 100 XOF prêts à être convertis en cash chez votre agent.</p>
+            </div>
+            <span class="ribbon gold">Frais offerts</span>
+          </div>
+
+          <div class="operator-grid">
+            <button class="operator moov" style="border-color:var(--accent);background:var(--accent-soft)">
+              <div class="logo">M</div>
+              <span style="color:var(--accent);font-weight:600">Moov · favori</span>
+            </button>
+            <button class="operator mtn">
+              <div class="logo">MTN</div>
+              MTN MoMo
+            </button>
+            <button class="operator celtiis">
+              <div class="logo">C</div>
+              Celtiis Cash
+            </button>
+          </div>
+        </div>
+
+        <!-- Received transfers -->
+        <div class="card">
+          <div class="section-head">
+            <h3>Transferts reçus</h3>
+            <a href="#">Tout l'historique →</a>
+          </div>
+
+          <div class="received-tx">
+            <div class="av" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)">AD</div>
+            <div class="info">
+              <div class="name">Aminata Diallo · 🇫🇷 Paris</div>
+              <div class="sub">
+                <span>€200,00 envoyés</span>
+                <span>·</span>
+                <span class="mono" style="color:var(--gold)">a3f9c8…7d21b4</span>
+                <span class="pill primary" style="padding:1px 7px;font-size:10px"><span class="dot pulse"></span>Conversion en cours</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="amt">+131 100 XOF</div>
+              <div class="meta-r">Il y a 18 s</div>
+            </div>
+          </div>
+
+          <div class="received-tx">
+            <div class="av" style="background:linear-gradient(135deg,#818CF8,#A78BFA);color:#1e1b4b">JO</div>
+            <div class="info">
+              <div class="name">Jean Olou · 🇧🇪 Bruxelles</div>
+              <div class="sub">
+                <span>€80,00 envoyés</span>
+                <span>·</span>
+                <span class="mono" style="color:var(--gold)">b1c0d9…43a2e0</span>
+                <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="amt">+52 440 XOF</div>
+              <div class="meta-r">02 mai · 16:08</div>
+            </div>
+          </div>
+
+          <div class="received-tx">
+            <div class="av" style="background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a0a02">AD</div>
+            <div class="info">
+              <div class="name">Aminata Diallo · 🇫🇷 Paris</div>
+              <div class="sub">
+                <span>€150,00 envoyés</span>
+                <span>·</span>
+                <span class="mono" style="color:var(--gold)">e8d4a2…9c1f37</span>
+                <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré · MTN</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="amt">+98 250 XOF</div>
+              <div class="meta-r">28 avril</div>
+            </div>
+          </div>
+
+          <div class="received-tx">
+            <div class="av" style="background:linear-gradient(135deg,#34D399,#10B981);color:#022c22">KS</div>
+            <div class="info">
+              <div class="name">Kossi Sodji · 🇨🇮 Abidjan</div>
+              <div class="sub">
+                <span>€60,00 envoyés</span>
+                <span>·</span>
+                <span class="mono" style="color:var(--gold)">f4a7b3…21d089</span>
+                <span class="pill success" style="padding:1px 7px;font-size:10px"><span class="dot"></span>Retiré · Moov</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="amt">+39 330 XOF</div>
+              <div class="meta-r">22 avril</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="stat-pill">
+            <div class="lbl">Reçu ce mois</div>
+            <div class="val">321 020 <span style="color:var(--text-tertiary);font-size:12px">XOF</span></div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px">↑ 4 transferts</div>
+          </div>
+          <div class="stat-pill">
+            <div class="lbl">Frais évités</div>
+            <div class="val" style="color:var(--primary)">€34</div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Vs Western Union</div>
+          </div>
+          <div class="stat-pill">
+            <div class="lbl">Délai moyen</div>
+            <div class="val">12,4 s</div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Bout en bout</div>
+          </div>
+          <div class="stat-pill">
+            <div class="lbl">Préféré</div>
+            <div class="val" style="font-size:18px">Moov Money</div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">3/4 retraits</div>
+          </div>
+        </div>
+
+        <!-- Sender map -->
+        <div class="card">
+          <div class="section-head">
+            <h3>Mes proches qui m'envoient</h3>
+            <a href="#">Voir →</a>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+            <div style="display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg-elevated)">
+              <div class="avatar" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)">AD</div>
+              <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:600">Aminata Diallo</div>
+                <div style="font-size:11px;color:var(--text-tertiary)" class="mono">Paris · 🇫🇷 · sœur</div>
+              </div>
+              <div style="text-align:right">
+                <div class="mono" style="font-size:13px;font-weight:600">€350</div>
+                <div style="font-size:10.5px;color:var(--text-tertiary)">2 envois</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg-elevated)">
+              <div class="avatar" style="background:linear-gradient(135deg,#818CF8,#A78BFA);color:#1e1b4b">JO</div>
+              <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:600">Jean Olou</div>
+                <div style="font-size:11px;color:var(--text-tertiary)" class="mono">Bruxelles · 🇧🇪 · cousin</div>
+              </div>
+              <div style="text-align:right">
+                <div class="mono" style="font-size:13px;font-weight:600">€80</div>
+                <div style="font-size:10.5px;color:var(--text-tertiary)">1 envoi</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg-elevated)">
+              <div class="avatar" style="background:linear-gradient(135deg,#34D399,#10B981);color:#022c22">KS</div>
+              <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:600">Kossi Sodji</div>
+                <div style="font-size:11px;color:var(--text-tertiary)" class="mono">Abidjan · 🇨🇮 · oncle</div>
+              </div>
+              <div style="text-align:right">
+                <div class="mono" style="font-size:13px;font-weight:600">€60</div>
+                <div style="font-size:10.5px;color:var(--text-tertiary)">1 envoi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trust card -->
+        <div class="card glow-primary">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:8px">
+            <div style="width:34px;height:34px;border-radius:9px;background:var(--primary-soft);display:grid;place-items:center;color:var(--primary)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3 style="margin:0;font-size:14px;font-weight:600">Garanti par la blockchain</h3>
+          </div>
+          <p style="margin:0 0 10px;font-size:12.5px;color:var(--text-secondary);line-height:1.6">
+            Chaque envoi est inscrit sur la blockchain Stellar. Personne ne peut le modifier, le supprimer, ou prélever des frais cachés. Le code remplace la confiance.
+          </p>
+          <a href="#" style="font-size:11.5px;color:var(--primary);text-decoration:none;font-weight:500" class="mono">→ Voir mes preuves on-chain</a>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
