@@ -134,3 +134,56 @@
 .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--success); animation: pulse 1.6s infinite; }
 
 @keyframes pulse { 0%,100%{opacity: 1} 50% { opacity: 0.4 } }
+
+/* ───────────────────────────────────────────────────────── */
+/* Light mode : le hero reste sombre (effet dramatique),     */
+/* donc on force le texte clair pour rester lisible.          */
+/* ───────────────────────────────────────────────────────── */
+:global([data-theme="light"]) .heroSide {
+  --text-primary:   rgba(255, 255, 255, 1);
+  --text-secondary: rgba(255, 255, 255, 0.86);
+  --text-tertiary:  rgba(255, 255, 255, 0.66);
+  --text-muted:     rgba(255, 255, 255, 0.5);
+  --border-subtle:  rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+:global([data-theme="light"]) .heroHeadline,
+:global([data-theme="light"]) .heroSub,
+:global([data-theme="light"]) .heroSide .name,
+:global([data-theme="light"]) .impactCard .v {
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx {
+  background: rgba(15, 23, 33, 0.92);
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx .name {
+  color: rgba(255, 255, 255, 0.95);
+}
+:global([data-theme="light"]) .floatingTx .meta {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ───────────────────────────────────────────────────────── */
+/* Floating cards : décoratives, on les retire sur viewports */
+/* étroits pour éviter qu'elles chevauchent le texte.         */
+/* ───────────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .floatingTx { display: none; }
+  .heroHeadline { font-size: 44px; }
+  .heroSide { padding: 32px 36px; }
+}
+@media (max-width: 1100px) {
+  .heroHeadline { font-size: 38px; }
+}
+
+/* ───────────────────────────────────────────────────────── */
+/* Mobile : auth side prend toute la largeur, padding réduit  */
+/* ───────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .authSide { padding: 36px 24px; }
+  .authCard { max-width: 100%; }
+}
+@media (max-width: 480px) {
+  .authSide { padding: 24px 16px; }
+}

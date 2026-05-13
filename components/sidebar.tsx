@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, X } from "lucide-react";
 import { 
   LogoIcon, 
   DashboardIcon, 
@@ -16,7 +16,12 @@ import {
 } from "./icons";
 import { useAuth } from "@/context/AuthContext";
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
@@ -51,14 +56,35 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="logo">
-          <LogoIcon style={{ width: "18px", height: "18px", color: "var(--bg-base)" }} />
+    <aside className={`sidebar ${isOpen ? "is-open" : ""}`}>
+      <div className="brand" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <div className="logo">
+            <LogoIcon style={{ width: "18px", height: "18px", color: "var(--bg-base)" }} />
+          </div>
+          <span className="name">Diaspora<span>Connect</span></span>
         </div>
-        <span className="name">Diaspora<span>Connect</span></span>
+        {/* Close button — only visible while the drawer is mounted in mobile mode */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer le menu"
+            className="sidebar-close"
+            style={{
+              display: "none",
+              background: "transparent",
+              border: 0,
+              padding: 4,
+              cursor: "pointer",
+              color: "var(--text-tertiary)",
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
-      
+
       <nav className="nav-group">
         <span className="nav-label">{isReceiver ? "Bénéficiaire" : "Expéditeur"}</span>
         {navItems.map((item) => (

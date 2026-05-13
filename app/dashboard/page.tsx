@@ -103,7 +103,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell
-      title={`Bonjour ${user?.email.split("@")[0]} 👋`}
+      title={`Bonjour ${user?.email.split("@")[0]}`}
       subtitle={
         stats.savings > 0 ? (
           <>
