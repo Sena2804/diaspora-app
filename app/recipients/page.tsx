@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { Spinner } from "@/components/ui/spinner";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 
 interface Beneficiaire {
@@ -27,11 +30,12 @@ const OPERATOR_LABEL: Record<Beneficiaire["operator"], string> = {
 export default function RecipientsPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [items, setItems] = useState<Beneficiaire[]>([]);
   const [fetching, setFetching] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -48,7 +52,7 @@ export default function RecipientsPage() {
       const data = (await res.json()) as { items?: Beneficiaire[] };
       setItems(data.items ?? []);
     } catch {
-      setError("Impossible de charger les bénéficiaires.");
+      toast.error("Impossible de charger les bénéficiaires.");
     } finally {
       setFetching(false);
     }
@@ -62,22 +66,27 @@ export default function RecipientsPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    const res = await fetch("/api/beneficiaires", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name: name, phone, operator }),
-    });
-    if (!res.ok) {
-      const err = (await res.json()) as ApiError;
-      setError(err.error?.message ?? "Échec.");
-      return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/beneficiaires", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: name, phone, operator }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as ApiError;
+        toast.error(err.error?.message ?? "Échec.");
+        return;
+      }
+      toast.success(`${name} ajouté à vos destinataires.`);
+      setName("");
+      setPhone("");
+      setOperator("moov");
+      setAdding(false);
+      await refresh();
+    } finally {
+      setSubmitting(false);
     }
-    setName("");
-    setPhone("");
-    setOperator("moov");
-    setAdding(false);
-    await refresh();
   }
 
   return (
@@ -138,17 +147,14 @@ export default function RecipientsPage() {
                 <option value="celtiis">Celtiis Cash</option>
               </select>
             </div>
-            {error && (
-              <div style={{ padding: 10, borderRadius: 8, background: "rgba(234, 88, 12, 0.10)", color: "var(--accent, #EA580C)", fontSize: 13 }}>
-                {error}
-              </div>
-            )}
-            <button type="submit" className="btn btn-primary">Enregistrer</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? (<><Spinner size={14} />Enregistrement…</>) : "Enregistrer"}
+            </button>
           </form>
         )}
 
         {fetching ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)" }}>Chargement…</div>
+          <SkeletonRows count={3} />
         ) : items.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", border: "1px dashed var(--border)", borderRadius: 16 }}>
             <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: "0 0 12px" }}>

@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { Spinner } from "@/components/ui/spinner";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 
 interface Beneficiaire {
@@ -39,15 +42,17 @@ const FEE_RATE = 0.002;
 export default function TransferPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [beneficiaires, setBeneficiaires] = useState<Beneficiaire[]>([]);
+  const [fetchingBenefs, setFetchingBenefs] = useState(true);
   const [selectedId, setSelectedId] = useState<string>("");
   const [amount, setAmount] = useState<number>(200);
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedTransfert | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
+  const [addingSubmit, setAddingSubmit] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newOperator, setNewOperator] = useState<"mtn" | "moov" | "celtiis">("moov");
@@ -65,7 +70,9 @@ export default function TransferPage() {
         setBeneficiaires(items);
         if (items.length > 0) setSelectedId((id) => id || items[0].id);
       })
-      .catch(() => setError("Impossible de charger les bénéficiaires."));
+      .catch(() => toast.error("Impossible de charger les bénéficiaires."))
+      .finally(() => setFetchingBenefs(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   if (loading || !isAuthenticated) return null;
@@ -75,33 +82,41 @@ export default function TransferPage() {
   const amountXof = Math.round(netEur * EUR_TO_XOF);
 
   async function addBeneficiaire() {
-    setError(null);
-    const res = await fetch("/api/beneficiaires", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name: newName, phone: newPhone, operator: newOperator }),
-    });
-    if (!res.ok) {
-      const err = (await res.json()) as ApiError;
-      setError(err.error?.message ?? "Échec de l'ajout.");
+    if (!newName.trim() || !newPhone.trim()) {
+      toast.error("Renseignez le nom et le téléphone.");
       return;
     }
-    const b = (await res.json()) as Beneficiaire;
-    setBeneficiaires((prev) => [b, ...prev]);
-    setSelectedId(b.id);
-    setAdding(false);
-    setNewName("");
-    setNewPhone("");
+    setAddingSubmit(true);
+    try {
+      const res = await fetch("/api/beneficiaires", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: newName, phone: newPhone, operator: newOperator }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as ApiError;
+        toast.error(err.error?.message ?? "Échec de l'ajout.");
+        return;
+      }
+      const b = (await res.json()) as Beneficiaire;
+      setBeneficiaires((prev) => [b, ...prev]);
+      setSelectedId(b.id);
+      setAdding(false);
+      setNewName("");
+      setNewPhone("");
+      toast.success(`Bénéficiaire ${b.full_name} ajouté.`);
+    } finally {
+      setAddingSubmit(false);
+    }
   }
 
   async function submitTransfert(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId) {
-      setError("Sélectionnez un bénéficiaire.");
+      toast.error("Sélectionnez un bénéficiaire.");
       return;
     }
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch("/api/transferts", {
         method: "POST",
@@ -110,11 +125,12 @@ export default function TransferPage() {
       });
       if (!res.ok) {
         const err = (await res.json()) as ApiError;
-        setError(err.error?.message ?? "Échec de la création du transfert.");
+        toast.error(err.error?.message ?? "Échec de la création du transfert.");
         return;
       }
       const data = (await res.json()) as CreatedTransfert;
       setCreated(data);
+      toast.success("Transfert créé. Confirmez la signature Stellar.");
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +187,7 @@ export default function TransferPage() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => { setCreated(null); setAmount(200); setError(null); }}
+              onClick={() => { setCreated(null); setAmount(200); }}
             >
               Nouveau transfert
             </button>
@@ -209,13 +225,20 @@ export default function TransferPage() {
                   <option value="celtiis">Celtiis Cash</option>
                 </select>
               </div>
-              <button type="button" className="btn btn-primary" onClick={addBeneficiaire}>
-                Ajouter
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={addBeneficiaire}
+                disabled={addingSubmit}
+              >
+                {addingSubmit ? (<><Spinner size={14} />Ajout…</>) : "Ajouter"}
               </button>
             </div>
           )}
 
-          {beneficiaires.length === 0 ? (
+          {fetchingBenefs ? (
+            <SkeletonRows count={2} />
+          ) : beneficiaires.length === 0 ? (
             <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0 }}>
               Aucun bénéficiaire. Cliquez « + Nouveau » pour en ajouter un.
             </p>
@@ -283,18 +306,16 @@ export default function TransferPage() {
           </div>
         </Section>
 
-        {error && (
-          <div style={{ padding: 12, borderRadius: 10, background: "rgba(234, 88, 12, 0.10)", color: "var(--accent, #EA580C)", fontSize: 13 }}>
-            {error}
-          </div>
-        )}
-
         <button
           type="submit"
           className="btn btn-primary btn-lg"
           disabled={submitting || !selectedId || amount <= 0}
         >
-          {submitting ? "Création…" : `Envoyer ${amount} EUR`}
+          {submitting ? (
+            <><Spinner size={16} />Création…</>
+          ) : (
+            `Envoyer ${amount} EUR`
+          )}
         </button>
       </form>
     </DashboardShell>

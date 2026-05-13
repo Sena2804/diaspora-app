@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 
 type Status =
@@ -105,9 +106,7 @@ export default function HistoryPage() {
         </div>
 
         {fetching ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)" }}>
-            Chargement…
-          </div>
+          <SkeletonRows count={4} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", border: "1px dashed var(--border)", borderRadius: 16 }}>
             <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: 0 }}>

@@ -2,15 +2,12 @@
 
 import React, { useState, FormEvent, useEffect } from "react";
 import Link from "next/link";
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  ChevronRight
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import styles from "./onboarding.module.css";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoIcon, SendIcon, ShoppingBagIcon } from "@/components/icons";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +20,8 @@ export default function OnboardingPage() {
 
   const { isAuthenticated, loading, login, signup, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const toast = useToast();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export default function OnboardingPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isLoginMode && role === "receiver" && !phone.trim()) {
-      alert("Le numéro de téléphone est requis pour recevoir des transferts.");
+      toast.error("Le numéro de téléphone est requis pour recevoir des transferts.");
       return;
     }
     setSubmitting(true);
@@ -43,11 +42,13 @@ export default function OnboardingPage() {
         ? await login(email, password, role)
         : await signup(email, password, role, phone.trim() || undefined);
       if (!success) {
-        alert(
+        toast.error(
           isLoginMode
             ? "Connexion échouée. Vérifiez vos identifiants."
             : "Inscription échouée. L'utilisateur existe peut-être déjà.",
         );
+      } else if (!isLoginMode) {
+        toast.success("Bienvenue ! Compte créé avec succès.");
       }
     } finally {
       setSubmitting(false);
@@ -213,23 +214,33 @@ export default function OnboardingPage() {
               </div>
             )}
             <div className="field">
-              <label style={{ display: "flex", justifyContent: "space-between" }}>
+              <label>
                 <span>Mot de passe</span>
-                {isLoginMode && (
-                  <Link href="#" style={{ color: "var(--primary)", fontWeight: 500, fontSize: "11.5px" }}>
-                    Oublié&nbsp;?
-                  </Link>
-                )}
               </label>
               <div className="input">
                 <Lock style={{ width: "16px", height: "16px", color: "var(--text-tertiary)" }} />
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
                 />
-                <Eye style={{ width: "16px", height: "16px", color: "var(--text-tertiary)", cursor: "pointer" }} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    cursor: "pointer",
+                    color: "var(--text-tertiary)",
+                    padding: 0,
+                    display: "flex",
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
@@ -239,32 +250,19 @@ export default function OnboardingPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting
-                ? (isLoginMode ? "Connexion…" : "Création…")
-                : (isLoginMode ? "Se connecter" : "Créer mon compte")}
-              <LogoIcon style={{ width: "18px", height: "18px" }} />
+              {submitting ? (
+                <>
+                  <Spinner size={16} color="currentColor" />
+                  {isLoginMode ? "Connexion…" : "Création…"}
+                </>
+              ) : (
+                <>
+                  {isLoginMode ? "Se connecter" : "Créer mon compte"}
+                  <LogoIcon style={{ width: "18px", height: "18px" }} />
+                </>
+              )}
             </button>
           </form>
-
-          <div className={styles.dividerText}>Ou continuer avec</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <button className={styles.btnSocial}>
-              <svg viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.15-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/>
-                <path fill="#FBBC05" d="M5.85 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.45.35-2.11V7.05H2.18a11 11 0 0 0 0 9.9l3.67-2.84Z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.67 2.84C6.71 7.31 9.14 5.38 12 5.38Z"/>
-              </svg>
-              Google
-            </button>
-            <button className={styles.btnSocial}>
-              <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: "16px", height: "16px" }}>
-                <path d="M17.04 12.43c-.03-2.65 2.16-3.93 2.26-3.99-1.23-1.8-3.15-2.05-3.84-2.08-1.63-.16-3.18.96-4.01.96-.84 0-2.1-.94-3.46-.91-1.78.03-3.42 1.04-4.34 2.62-1.85 3.21-.47 7.97 1.33 10.59.88 1.27 1.93 2.7 3.3 2.65 1.32-.05 1.83-.86 3.43-.86 1.6 0 2.05.86 3.45.83 1.42-.02 2.32-1.3 3.19-2.58.99-1.49 1.4-2.93 1.42-3.01-.03-.02-2.74-1.05-2.77-4.18M14.7 4.5c.73-.88 1.22-2.11 1.08-3.34-1.05.04-2.32.7-3.07 1.58-.68.78-1.27 2.04-1.11 3.24 1.17.09 2.37-.6 3.1-1.48"/>
-              </svg>
-              Apple
-            </button>
-          </div>
 
           <div className={styles.authFoot}>
             {isLoginMode ? (

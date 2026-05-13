@@ -3,6 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { Spinner } from "@/components/ui/spinner";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 
 type Status =
@@ -58,8 +61,8 @@ export default function WalletPage() {
   const [items, setItems] = useState<IncomingTransfert[]>([]);
   const [fetching, setFetching] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [noPhoneWarning, setNoPhoneWarning] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.push("/");
@@ -76,7 +79,7 @@ export default function WalletPage() {
       setItems(data.items ?? []);
       setNoPhoneWarning(data.reason === "NO_PHONE_REGISTERED");
     } catch {
-      setMessage({ kind: "err", text: "Impossible de charger vos transferts." });
+      toast.error("Impossible de charger vos transferts.");
     } finally {
       setFetching(false);
     }
@@ -88,18 +91,14 @@ export default function WalletPage() {
 
   async function withdraw(id: string) {
     setWithdrawing(id);
-    setMessage(null);
     try {
       const res = await fetch(`/api/withdrawals/${id}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setMessage({ kind: "err", text: data?.error?.message ?? "Échec du retrait." });
+        toast.error(data?.error?.message ?? "Échec du retrait.");
         return;
       }
-      setMessage({
-        kind: "ok",
-        text: "Retrait initié. Vous recevrez une notification MoMo dans quelques secondes.",
-      });
+      toast.success("Retrait initié. Notification MoMo dans quelques secondes.");
       await refresh();
     } finally {
       setWithdrawing(null);
@@ -174,21 +173,6 @@ export default function WalletPage() {
           </div>
         )}
 
-        {message && (
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 10,
-              background:
-                message.kind === "ok" ? "rgba(34,197,94,0.10)" : "rgba(234, 88, 12, 0.10)",
-              color: message.kind === "ok" ? "#15803d" : "var(--accent, #EA580C)",
-              fontSize: 13,
-            }}
-          >
-            {message.text}
-          </div>
-        )}
-
         {/* --- Incoming transfers --- */}
         <section>
           <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px" }}>
@@ -196,9 +180,7 @@ export default function WalletPage() {
           </h3>
 
           {fetching ? (
-            <div style={{ padding: 30, textAlign: "center", color: "var(--text-tertiary)" }}>
-              Chargement…
-            </div>
+            <SkeletonRows count={3} />
           ) : items.length === 0 ? (
             <div
               style={{
@@ -273,7 +255,11 @@ export default function WalletPage() {
                           disabled={withdrawing === t.id}
                           style={{ fontSize: 12, padding: "6px 14px" }}
                         >
-                          {withdrawing === t.id ? "…" : "Retirer sur MoMo"}
+                          {withdrawing === t.id ? (
+                            <><Spinner size={12} />Retrait…</>
+                          ) : (
+                            "Retirer sur MoMo"
+                          )}
                         </button>
                       )}
                     </div>

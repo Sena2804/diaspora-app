@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { 
   LogoIcon, 
   DashboardIcon, 
@@ -94,8 +94,30 @@ export function Sidebar() {
           <div className="name">{user?.email.split('@')[0]}</div>
           <div className="meta">{user?.role === 'sender' ? 'Diaspora · Expéditeur' : 'Bénéficiaire · Bénin'}</div>
         </div>
-        <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <ChevronRight style={{ width: "14px", height: "14px", color: "var(--text-tertiary)" }} />
+        <button
+          onClick={logout}
+          title="Se déconnecter"
+          aria-label="Se déconnecter"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-subtle)',
+            cursor: 'pointer',
+            padding: '6px',
+            borderRadius: '8px',
+            color: 'var(--text-tertiary)',
+            display: 'inline-flex',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--accent, #EA580C)';
+            e.currentTarget.style.borderColor = 'var(--accent, #EA580C)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-tertiary)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+          }}
+        >
+          <LogOut style={{ width: "14px", height: "14px" }} />
         </button>
       </div>
     </aside>

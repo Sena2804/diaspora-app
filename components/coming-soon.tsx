@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 interface ComingSoonProps {
   icon?: React.ReactNode;
@@ -100,9 +101,9 @@ export function ComingSoon({ icon, title, description, bullets, cta }: ComingSoo
       </span>
 
       {cta && (
-        <a className="btn btn-primary" href={cta.href} style={{ marginLeft: 10 }}>
+        <Link className="btn btn-primary" href={cta.href} style={{ marginLeft: 10 }}>
           {cta.label}
-        </a>
+        </Link>
       )}
     </div>
   );

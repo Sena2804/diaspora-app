@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
@@ -13,7 +15,7 @@ export default function SettingsPage() {
 
   const [phone, setPhone] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
-  const [phoneMessage, setPhoneMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.push("/");
@@ -28,16 +30,15 @@ export default function SettingsPage() {
   async function savePhone(e: React.FormEvent) {
     e.preventDefault();
     setSavingPhone(true);
-    setPhoneMessage(null);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ phone: phone.trim() })
         .eq("id", user!.id);
       if (error) {
-        setPhoneMessage({ kind: "err", text: error.message });
+        toast.error(error.message);
       } else {
-        setPhoneMessage({ kind: "ok", text: "Numéro enregistré." });
+        toast.success("Numéro enregistré.");
         // Wait a moment then reload so AuthContext re-hydrates from profile.
         setTimeout(() => window.location.reload(), 700);
       }
@@ -75,24 +76,8 @@ export default function SettingsPage() {
                 style={{ padding: "10px 12px" }}
               />
             </div>
-            {phoneMessage && (
-              <div
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  background:
-                    phoneMessage.kind === "ok"
-                      ? "rgba(34,197,94,0.10)"
-                      : "rgba(234, 88, 12, 0.10)",
-                  color: phoneMessage.kind === "ok" ? "#15803d" : "var(--accent, #EA580C)",
-                  fontSize: 13,
-                }}
-              >
-                {phoneMessage.text}
-              </div>
-            )}
             <button type="submit" className="btn btn-primary" disabled={savingPhone}>
-              {savingPhone ? "Enregistrement…" : "Enregistrer"}
+              {savingPhone ? (<><Spinner size={14} />Enregistrement…</>) : "Enregistrer"}
             </button>
           </form>
         </section>
