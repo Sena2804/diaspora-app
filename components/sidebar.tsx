@@ -41,7 +41,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
 
   const toolItems = isReceiver
     ? [
-        { label: "Preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
         { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
       ]
     : [
