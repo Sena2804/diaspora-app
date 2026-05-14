@@ -330,7 +330,7 @@ export default function AccountPage() {
                   Vérification en attente
                 </span>
                 <a
-                  href="/settings"
+                  href="/kyc"
                   style={{
                     fontSize: 12,
                     color: "var(--primary)",

@@ -7,6 +7,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
+import { usePinConfirm } from "@/components/pin-gate";
+import { Lock } from "lucide-react";
 
 type Status =
   | "pending"
@@ -57,11 +59,16 @@ const WITHDRAWABLE: Status[] = ["stellar_received"];
 export default function WalletPage() {
   const { isAuthenticated, loading, user } = useAuth();
   const router = useRouter();
+  const { confirmWithPin } = usePinConfirm();
   const [items, setItems] = useState<IncomingTransfert[]>([]);
   const [fetching, setFetching] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [noPhoneWarning, setNoPhoneWarning] = useState(false);
   const toast = useToast();
+  // Le retrait n'est autorisé que si le téléphone est vérifié — sinon on ne
+  // sait pas où envoyer l'argent, et c'est ce que le mentor demandait
+  // (compte verrouillé en réception tant que le numéro n'est pas validé).
+  const canReceive = !!user?.phone && !!user?.phoneVerified;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.push("/");
@@ -102,7 +109,15 @@ export default function WalletPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  async function withdraw(id: string) {
+  async function withdraw(id: string, amountXof: number) {
+    const ok = await confirmWithPin({
+      title: "Confirme le retrait",
+      subtitle: `Tu vas retirer ${amountXof.toLocaleString("fr-FR")} XOF sur ton compte Mobile Money.`,
+    });
+    if (!ok) {
+      toast.info("Retrait annulé.");
+      return;
+    }
     setWithdrawing(id);
     try {
       const res = await fetch(`/api/withdrawals/${id}`, { method: "POST" });
@@ -264,12 +279,15 @@ export default function WalletPage() {
                       {canWithdraw && (
                         <button
                           className="btn btn-primary"
-                          onClick={() => withdraw(t.id)}
-                          disabled={withdrawing === t.id}
-                          style={{ fontSize: 12, padding: "6px 14px" }}
+                          onClick={() => withdraw(t.id, Number(t.amount_xof))}
+                          disabled={withdrawing === t.id || !canReceive}
+                          title={!canReceive ? "Vérifie ton téléphone pour retirer" : undefined}
+                          style={{ fontSize: 12, padding: "6px 14px", opacity: canReceive ? 1 : 0.55 }}
                         >
                           {withdrawing === t.id ? (
                             <><Spinner size={12} />Retrait…</>
+                          ) : !canReceive ? (
+                            <><Lock size={12} />Téléphone non vérifié</>
                           ) : (
                             "Retirer sur MoMo"
                           )}

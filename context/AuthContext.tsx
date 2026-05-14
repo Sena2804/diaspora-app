@@ -44,6 +44,8 @@ interface AppUser {
   country: string | null;
   kycStatus: KycStatus | null;
   phoneVerified: boolean;
+  documentType: string | null;
+  documentNumber: string | null;
 }
 
 export type AuthResult =
@@ -94,10 +96,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let country: string | null = null;
     let kycStatus: KycStatus | null = null;
     let phoneVerified = false;
+    let documentType: string | null = null;
+    let documentNumber: string | null = null;
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, phone, wallet_id, first_name, last_name, country, kyc_status, phone_verified_at')
+        .select('role, phone, wallet_id, first_name, last_name, country, kyc_status, phone_verified_at, document_type, document_number')
         .eq('id', authUser.id)
         .single();
       if (profile?.role) role = dbToFrontendRole(profile.role as DbRole);
@@ -108,6 +112,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       country = profile?.country ?? null;
       kycStatus = (profile?.kyc_status as KycStatus | undefined) ?? null;
       phoneVerified = !!profile?.phone_verified_at;
+      documentType = profile?.document_type ?? null;
+      documentNumber = profile?.document_number ?? null;
     } catch {
       // Trigger may not have inserted yet on first signup — fall back to defaults
     }
@@ -122,6 +128,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       country,
       kycStatus,
       phoneVerified,
+      documentType,
+      documentNumber,
     });
   };
 

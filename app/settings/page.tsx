@@ -139,6 +139,13 @@ export default function SettingsPage() {
                   ? "Aucune limite de transfert."
                   : "Limite 500 €/mois tant que la pièce d'identité n'est pas validée."
               }
+              action={
+                user.kycStatus !== "verified" ? (
+                  <a href="/kyc" className="btn btn-primary" style={{ fontSize: 12, padding: "6px 12px" }}>
+                    Vérifier
+                  </a>
+                ) : null
+              }
             />
           </div>
         </section>

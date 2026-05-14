@@ -338,11 +338,20 @@ interface ConfirmViewProps {
 
 function ConfirmTransfertView({ created, beneficiaire, onReset }: ConfirmViewProps) {
   const toast = useToast();
+  const { confirmWithPin } = usePinConfirm();
   const [signing, setSigning] = React.useState(false);
   const [status, setStatus] = React.useState<string>(created.status);
   const [stellarHash, setStellarHash] = React.useState<string | null>(null);
 
   async function confirmStellarSignature() {
+    const ok = await confirmWithPin({
+      title: "Confirme la signature Stellar",
+      subtitle: `Tu autorises le débit de ${Number(created.amount_eur).toFixed(2)} € depuis ton compte.`,
+    });
+    if (!ok) {
+      toast.info("Confirmation annulée.");
+      return;
+    }
     setSigning(true);
     try {
       const res = await fetch(`/api/transferts/${created.id}/submit-stellar`, {
