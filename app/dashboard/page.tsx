@@ -10,7 +10,6 @@ import {
   ClockIcon,
   UsersIcon,
   ActivityIcon,
-  PlusIcon,
   LinkIcon,
   TrendingUpIcon,
 } from "@/components/icons";

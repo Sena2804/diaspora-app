@@ -25,31 +25,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const isReceiver = user?.role === "receiver";
+  // Profil unifié (session 8) : tous les utilisateurs peuvent envoyer ET
+  // recevoir, donc la sidebar ne se splitte plus par rôle. Les ex-pages
+  // "/dashboard" (envoi) et "/wallet" (réception) restent toutes deux
+  // accessibles, l'utilisateur choisit ce qu'il fait.
+  const navItems = [
+    { label: "Tableau de bord", icon: DashboardIcon, href: "/dashboard", badge: null },
+    { label: "Nouvel envoi", icon: SendIcon, href: "/transfer", badge: null },
+    { label: "Mon portefeuille", icon: DashboardIcon, href: "/wallet", badge: null },
+    { label: "Historique", icon: HistoryIcon, href: "/history", badge: null },
+    { label: "Destinataires", icon: UsersIcon, href: "/recipients", badge: null },
+  ];
 
-  const navItems = isReceiver
-    ? [
-        { label: "Mon portefeuille", icon: DashboardIcon, href: "/wallet", badge: null },
-        { label: "Historique reçus", icon: HistoryIcon, href: "/history", badge: null },
-      ]
-    : [
-        { label: "Tableau de bord", icon: DashboardIcon, href: "/dashboard", badge: null },
-        { label: "Nouvel envoi", icon: SendIcon, href: "/transfer", badge: null },
-        { label: "Historique", icon: HistoryIcon, href: "/history", badge: null },
-        { label: "Destinataires", icon: UsersIcon, href: "/recipients", badge: null },
-      ];
-
-  const toolItems = isReceiver
-    ? [
-        { label: "Mon compte", icon: UserCircle, href: "/account" },
-        { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
-      ]
-    : [
-        { label: "Mon compte", icon: UserCircle, href: "/account" },
-        { label: "Comparateur frais", icon: CompareIcon, href: "/compare" },
-        { label: "Mes preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
-        { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
-      ];
+  const toolItems = [
+    { label: "Mon compte", icon: UserCircle, href: "/account" },
+    { label: "Comparateur frais", icon: CompareIcon, href: "/compare" },
+    { label: "Mes preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
+    { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
+  ];
 
   const getInitials = (email: string | undefined) => {
     if (!email) return "??";
@@ -87,7 +80,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
       </div>
 
       <nav className="nav-group">
-        <span className="nav-label">{isReceiver ? "Bénéficiaire" : "Expéditeur"}</span>
+        <span className="nav-label">Mon argent</span>
         {navItems.map((item) => (
           <Link 
             key={item.href} 
@@ -118,8 +111,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
       <div className="user-card">
         <div className="avatar">{getInitials(user?.email)}</div>
         <div className="info">
-          <div className="name">{user?.email.split('@')[0]}</div>
-          <div className="meta">{user?.role === 'sender' ? 'Diaspora · Expéditeur' : 'Bénéficiaire · Bénin'}</div>
+          <div className="name">
+            {user?.firstName
+              ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
+              : user?.email.split('@')[0]}
+          </div>
+          <div className="meta mono" style={{ fontSize: 11 }}>
+            {user?.walletId ?? "DC-…"}
+          </div>
         </div>
         <button
           onClick={logout}

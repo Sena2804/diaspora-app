@@ -8,20 +8,19 @@ import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { SendIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
+import { PinGate } from "./pin-gate";
 
 interface DashboardShellProps {
   children: React.ReactNode;
   title: string;
   subtitle?: React.ReactNode;
-  /** Custom right-aligned topbar actions. Defaults are role-aware:
-   *  - sender: shows "Nouvel envoi" + theme toggle
-   *  - receiver: shows theme toggle only (no send action — they receive money) */
+  /** Custom right-aligned topbar actions. Default shows "Nouvel envoi"
+   *  for everyone (profil unifié — chacun peut envoyer ET recevoir). */
   actions?: React.ReactNode;
 }
 
 export function DashboardShell({ children, title, subtitle, actions }: DashboardShellProps) {
-  const { user } = useAuth();
-  const isReceiver = user?.role === "receiver";
+  useAuth(); // keep the hook call for future use (e.g., greeting in topbar)
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
 
@@ -41,6 +40,7 @@ export function DashboardShell({ children, title, subtitle, actions }: Dashboard
   }, [mobileNavOpen]);
 
   return (
+    <PinGate>
     <div className="shell">
       <Sidebar isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div
@@ -65,19 +65,20 @@ export function DashboardShell({ children, title, subtitle, actions }: Dashboard
             </div>
           </div>
           <div className="toolbar">
-            {actions !== undefined
-              ? actions
-              : !isReceiver && (
-                  <Link href="/transfer" className="btn btn-primary">
-                    <SendIcon style={{ width: "16px", height: "16px" }} />
-                    Nouvel envoi
-                  </Link>
-                )}
+            {actions !== undefined ? (
+              actions
+            ) : (
+              <Link href="/transfer" className="btn btn-primary">
+                <SendIcon style={{ width: "16px", height: "16px" }} />
+                Nouvel envoi
+              </Link>
+            )}
             <ThemeToggle />
           </div>
         </div>
         {children}
       </main>
     </div>
+    </PinGate>
   );
 }

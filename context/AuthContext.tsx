@@ -12,10 +12,26 @@ import { useRouter } from 'next/navigation';
 import type { User as SupaUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
+// Le concept "sender / receiver" a été abandonné session 8 — un seul profil
+// unifié qui peut envoyer ET recevoir. Le champ `role` n'est conservé que pour
+// compatibilité DB et n'a plus d'impact UX.
 type FrontendRole = 'sender' | 'receiver';
 type DbRole = 'expediteur' | 'beneficiaire' | 'admin';
 
 export type KycStatus = 'pending' | 'verified' | 'rejected';
+
+export interface SignupPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;       // YYYY-MM-DD
+  placeOfBirth: string;
+  phone: string;             // Full E.164 form, ex. "+22901234567"
+  country: string;           // ISO code, ex. "BJ", "FR"
+  documentType: 'NPI' | 'CIN' | 'PASSPORT' | 'RESIDENCE_PERMIT' | 'DRIVER_LICENSE';
+  documentNumber: string;
+}
 
 interface AppUser {
   id: string;
@@ -49,13 +65,8 @@ interface AuthContextType {
   /** True while the initial session check is in flight. Pages should hold
    *  off any redirect-decision until `loading === false`. */
   loading: boolean;
-  login: (email: string, password: string, role: FrontendRole) => Promise<AuthResult>;
-  signup: (
-    email: string,
-    password: string,
-    role: FrontendRole,
-    phone?: string,
-  ) => Promise<AuthResult>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  signup: (payload: SignupPayload) => Promise<AuthResult>;
   logout: () => Promise<void>;
 }
 
@@ -63,9 +74,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function dbToFrontendRole(db: DbRole): FrontendRole {
   return db === 'beneficiaire' ? 'receiver' : 'sender';
-}
-function frontendToDbRole(fe: FrontendRole): DbRole {
-  return fe === 'receiver' ? 'beneficiaire' : 'expediteur';
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -188,29 +196,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { ok: true };
   };
 
-  const signup = async (
-    email: string,
-    password: string,
-    role: FrontendRole,
-    phone?: string,
-  ): Promise<AuthResult> => {
-    const dbRole = frontendToDbRole(role);
+  const signup = async (payload: SignupPayload): Promise<AuthResult> => {
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { role: dbRole, phone: phone ?? null } },
+      email: payload.email,
+      password: payload.password,
+      options: {
+        // Anything in `data` is forwarded to the `handle_new_user` SQL trigger
+        // via `new.raw_user_meta_data` so the trigger can set initial values.
+        data: { phone: payload.phone },
+      },
     });
     if (error || !data.user) {
       const code = classifySupabaseError(error?.message);
       return { ok: false, code, message: humanMessage(code) };
     }
-    // The SQL trigger creates the profile with default role 'expediteur'.
-    // Write back the actual role + phone the user picked.
-    const updates: { role?: DbRole; phone?: string } = {};
-    if (dbRole !== 'expediteur') updates.role = dbRole;
-    if (phone) updates.phone = phone;
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('profiles').update(updates).eq('id', data.user.id);
+    // The trigger creates the profile with the wallet_id + email + phone.
+    // We update the rest of the profile here so the user is ready to operate.
+    const fullName = `${payload.firstName} ${payload.lastName}`.trim();
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+        full_name: fullName,
+        date_of_birth: payload.dateOfBirth,
+        place_of_birth: payload.placeOfBirth,
+        phone: payload.phone,
+        country: payload.country,
+        document_type: payload.documentType,
+        document_number: payload.documentNumber,
+      })
+      .eq('id', data.user.id);
+    if (updateError) {
+      // We don't fail the signup — the auth account is created; the profile
+      // can be completed later from /settings.
+      console.warn('[signup] profile update failed:', updateError.message);
     }
     return { ok: true };
   };
