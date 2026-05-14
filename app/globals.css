@@ -546,6 +546,41 @@ body {
 .input input { background: transparent; border: 0; outline: 0; flex: 1; color: inherit; font: inherit; min-width: 0; }
 .input .prefix, .input .suffix { color: var(--text-tertiary); font-size: 13px; flex-shrink: 0; }
 
+/* Native select et date inputs : forcent les couleurs de thème
+   sinon les options du dropdown sont blanc-sur-blanc en thème sombre. */
+.input select {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  flex: 1;
+  color: var(--text-primary);
+  font: inherit;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+}
+/* Les options du dropdown : forcer fond ET texte sinon illisible. */
+.input select option {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 8px;
+}
+/* Date input : forcer le calendrier en thème sombre. */
+.input input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+/* Indique au navigateur quel schéma utiliser pour les widgets natifs
+   (dropdowns, scrollbars, calendriers, autofill). */
+html { color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
+
 .amount-input {
   background: linear-gradient(180deg, var(--bg-surface), var(--bg-base));
   border: 1px solid var(--border);

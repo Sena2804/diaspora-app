@@ -134,10 +134,12 @@ export default function KycPage() {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{docLabel}</div>
               <div className="mono" style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                {user.documentNumber ?? "—"}
+                {user.documentNumber ?? "Numéro non renseigné"}
               </div>
             </div>
-            <a href="/settings" style={{ fontSize: 11, color: "var(--text-tertiary)", textDecoration: "underline" }}>Modifier dans Paramètres</a>
+            <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic" }}>
+              Non modifiable — déclaré à l&apos;inscription
+            </span>
           </div>
         </section>
 

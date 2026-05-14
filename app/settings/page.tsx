@@ -58,12 +58,13 @@ export default function SettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) {
-      toast.error("Prénom et nom requis.");
-      return;
-    }
+    // Tous les champs sont optionnels — on n'envoie que ce qui est rempli.
     if (phoneLocal.length > 0 && !phoneValid) {
       toast.error(`Format de numéro invalide pour ${country.name}.`);
+      return;
+    }
+    if (!dirty) {
+      toast.info("Rien n'a changé.");
       return;
     }
 
@@ -76,14 +77,15 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!user) return;
     setSaving(true);
     try {
-      const payload: Record<string, string> = {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        country: countryCode,
-      };
-      if (newPhoneFull) payload.phone = newPhoneFull;
+      // On n'envoie QUE les champs qui ont vraiment changé.
+      const payload: Record<string, string> = {};
+      if (firstName !== (user.firstName ?? "")) payload.first_name = firstName.trim();
+      if (lastName !== (user.lastName ?? "")) payload.last_name = lastName.trim();
+      if (countryCode !== (user.country ?? "BJ")) payload.country = countryCode;
+      if (phoneChanged && newPhoneFull) payload.phone = newPhoneFull;
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -162,13 +164,13 @@ export default function SettingsPage() {
                 <label>Prénom</label>
                 <div className="input">
                   <User style={{ width: 16, height: 16, color: "var(--text-tertiary)" }} />
-                  <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                  <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                 </div>
               </div>
               <div className="field">
                 <label>Nom</label>
                 <div className="input">
-                  <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                  <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                 </div>
               </div>
             </div>

@@ -8,7 +8,6 @@ import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { SendIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
-import { PinGate } from "./pin-gate";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -40,7 +39,6 @@ export function DashboardShell({ children, title, subtitle, actions }: Dashboard
   }, [mobileNavOpen]);
 
   return (
-    <PinGate>
     <div className="shell">
       <Sidebar isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div
@@ -79,6 +77,5 @@ export function DashboardShell({ children, title, subtitle, actions }: Dashboard
         {children}
       </main>
     </div>
-    </PinGate>
   );
 }

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/components/ui/toast";
+import { PinGate } from "@/components/pin-gate";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -38,7 +39,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ToastProvider>
-              {children}
+              <PinGate>{children}</PinGate>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

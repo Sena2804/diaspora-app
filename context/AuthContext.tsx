@@ -205,40 +205,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (payload: SignupPayload): Promise<AuthResult> => {
+    // Tout passe via options.data → la trigger SQL handle_new_user (sécurity
+    // definer, donc bypass RLS) lit ces champs et crée le profil complet.
+    // Cela marche même quand "Confirm email" est activé (pas de session
+    // immédiate côté client).
     const { data, error } = await supabase.auth.signUp({
       email: payload.email,
       password: payload.password,
       options: {
-        // Anything in `data` is forwarded to the `handle_new_user` SQL trigger
-        // via `new.raw_user_meta_data` so the trigger can set initial values.
-        data: { phone: payload.phone },
+        data: {
+          first_name: payload.firstName,
+          last_name: payload.lastName,
+          date_of_birth: payload.dateOfBirth,
+          place_of_birth: payload.placeOfBirth,
+          phone: payload.phone,
+          country: payload.country,
+          document_type: payload.documentType,
+          document_number: payload.documentNumber,
+        },
       },
     });
     if (error || !data.user) {
       const code = classifySupabaseError(error?.message);
       return { ok: false, code, message: humanMessage(code) };
-    }
-    // The trigger creates the profile with the wallet_id + email + phone.
-    // We update the rest of the profile here so the user is ready to operate.
-    const fullName = `${payload.firstName} ${payload.lastName}`.trim();
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        first_name: payload.firstName,
-        last_name: payload.lastName,
-        full_name: fullName,
-        date_of_birth: payload.dateOfBirth,
-        place_of_birth: payload.placeOfBirth,
-        phone: payload.phone,
-        country: payload.country,
-        document_type: payload.documentType,
-        document_number: payload.documentNumber,
-      })
-      .eq('id', data.user.id);
-    if (updateError) {
-      // We don't fail the signup — the auth account is created; the profile
-      // can be completed later from /settings.
-      console.warn('[signup] profile update failed:', updateError.message);
     }
     return { ok: true };
   };

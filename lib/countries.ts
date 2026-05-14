@@ -71,8 +71,8 @@ export const COUNTRIES: Country[] = [
       },
       {
         code: 'CIN',
-        label: 'CIP / Carte Nationale d\'Identité',
-        placeholder: 'Numéro de la CIP',
+        label: 'CIN (Carte d\'Identité Nationale)',
+        placeholder: 'Numéro de la CIN',
         regex: /^[A-Z0-9-]{6,15}$/i,
         helpText: '6 à 15 caractères, tel qu\'imprimé sur la carte.',
       },

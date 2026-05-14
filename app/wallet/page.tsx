@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Spinner } from "@/components/ui/spinner";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 import { usePinConfirm } from "@/components/pin-gate";
-import { Lock } from "lucide-react";
 
 type Status =
   | "pending"
@@ -18,20 +18,31 @@ type Status =
   | "completed"
   | "failed";
 
+interface SenderInfo {
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  email: string | null;
+  wallet_id: string | null;
+  country: string | null;
+}
+
 interface IncomingTransfert {
   id: string;
   amount_eur: number;
   amount_xof: number;
   fee_eur: number;
   status: Status;
+  motif: string | null;
   created_at: string;
   completed_at: string | null;
-  beneficiaire: {
-    full_name: string;
-    phone: string;
-    operator: "mtn" | "moov" | "celtiis";
-  } | null;
-  sender: { email: string; full_name: string | null } | null;
+  sender: SenderInfo | null;
+}
+
+interface InboxResponse {
+  items: IncomingTransfert[];
+  can_withdraw: boolean;
+  recipient_phone: string | null;
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -52,62 +63,87 @@ const STATUS_COLOR: Record<Status, { bg: string; fg: string }> = {
   failed: { bg: "rgba(239,68,68,0.16)", fg: "#b91c1c" },
 };
 
-// The receiver can only withdraw once the sender has confirmed the Stellar
-// payment. Earlier statuses show as "waiting for sender".
 const WITHDRAWABLE: Status[] = ["stellar_received"];
 
 export default function WalletPage() {
-  const { isAuthenticated, loading, user } = useAuth();
+  // ─── HOOKS — ordre stable, AUCUN appel conditionnel ───
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const { confirmWithPin } = usePinConfirm();
+  const toast = useToast();
   const [items, setItems] = useState<IncomingTransfert[]>([]);
   const [fetching, setFetching] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
-  const [noPhoneWarning, setNoPhoneWarning] = useState(false);
-  const toast = useToast();
-  // Le retrait n'est autorisé que si le téléphone est vérifié — sinon on ne
-  // sait pas où envoyer l'argent, et c'est ce que le mentor demandait
-  // (compte verrouillé en réception tant que le numéro n'est pas validé).
-  const canReceive = !!user?.phone && !!user?.phoneVerified;
+  const [canWithdraw, setCanWithdraw] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.push("/");
   }, [loading, isAuthenticated, router]);
 
-  async function refresh() {
-    setFetching(true);
-    try {
-      const res = await fetch("/api/inbox");
-      const data = (await res.json()) as {
-        items?: IncomingTransfert[];
-        reason?: string;
-      };
-      setItems(data.items ?? []);
-      setNoPhoneWarning(data.reason === "NO_PHONE_REGISTERED");
-    } catch {
-      toast.error("Impossible de charger vos transferts.");
-    } finally {
-      setFetching(false);
-    }
-  }
-
   useEffect(() => {
-    if (isAuthenticated) refresh();
+    if (!isAuthenticated) return;
+    let aborted = false;
+    const load = async () => {
+      setFetching(true);
+      try {
+        const res = await fetch("/api/inbox");
+        const data = (await res.json()) as InboxResponse;
+        if (aborted) return;
+        setItems(data.items ?? []);
+        setCanWithdraw(!!data.can_withdraw);
+      } catch {
+        if (!aborted) toast.error("Impossible de charger vos transferts.");
+      } finally {
+        if (!aborted) setFetching(false);
+      }
+    };
+    load();
+    return () => {
+      aborted = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // Live polling: while at least one transfert is mid-flight (momo_initiated),
-  // re-fetch /api/inbox every 3 seconds so the receiver sees the status flip
-  // to "completed" without manual refresh.
+  // Polling discret tant qu'un retrait est en vol (momo_initiated).
   useEffect(() => {
     const hasInFlight = items.some((t) => t.status === "momo_initiated");
     if (!hasInFlight) return;
-    const id = window.setInterval(() => {
-      refresh();
+    const id = window.setInterval(async () => {
+      try {
+        const res = await fetch("/api/inbox");
+        const data = (await res.json()) as InboxResponse;
+        setItems(data.items ?? []);
+        setCanWithdraw(!!data.can_withdraw);
+      } catch {
+        /* silent */
+      }
     }, 3000);
     return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
+
+  const stats = useMemo(() => {
+    const pending = items.filter((t) => WITHDRAWABLE.includes(t.status));
+    const completed = items.filter((t) => t.status === "completed");
+    return {
+      pendingXof: pending.reduce((acc, t) => acc + Number(t.amount_xof), 0),
+      pendingCount: pending.length,
+      totalReceived: completed.reduce((acc, t) => acc + Number(t.amount_xof), 0),
+    };
+  }, [items]);
+
+  // ─── End hooks ─── Early return SAFE ici, toutes les hooks au-dessus.
+  if (loading || !isAuthenticated) return null;
+
+  async function refresh() {
+    try {
+      const res = await fetch("/api/inbox");
+      const data = (await res.json()) as InboxResponse;
+      setItems(data.items ?? []);
+      setCanWithdraw(!!data.can_withdraw);
+    } catch {
+      /* silent */
+    }
+  }
 
   async function withdraw(id: string, amountXof: number) {
     const ok = await confirmWithPin({
@@ -133,32 +169,19 @@ export default function WalletPage() {
     }
   }
 
-  const stats = useMemo(() => {
-    const pending = items.filter((t) => WITHDRAWABLE.includes(t.status));
-    const completed = items.filter((t) => t.status === "completed");
-    return {
-      pendingXof: pending.reduce((acc, t) => acc + Number(t.amount_xof), 0),
-      pendingCount: pending.length,
-      totalReceived: completed.reduce((acc, t) => acc + Number(t.amount_xof), 0),
-      totalReceivedCount: completed.length,
-    };
-  }, [items]);
-
-  if (loading || !isAuthenticated) return null;
-
   return (
     <DashboardShell
-      title={`Bonjour ${user?.email.split("@")[0] ?? ""}`}
+      title="Mon portefeuille"
       subtitle={
-        noPhoneWarning
-          ? "Renseignez votre numéro Mobile Money dans Paramètres pour commencer à recevoir."
+        !canWithdraw
+          ? "Vérifie ton numéro Mobile Money pour pouvoir retirer."
           : stats.pendingCount > 0
-            ? `Vous avez ${stats.pendingXof.toLocaleString("fr-FR")} XOF prêts à retirer.`
+            ? `Tu as ${stats.pendingXof.toLocaleString("fr-FR")} XOF prêts à retirer.`
             : "Tout est à jour. Aucun retrait en attente."
       }
     >
       <div style={{ display: "grid", gap: 18, maxWidth: 820 }}>
-        {/* --- Balance card --- */}
+        {/* Balance card */}
         <section
           style={{
             padding: 24,
@@ -181,31 +204,38 @@ export default function WalletPage() {
           </div>
         </section>
 
-        {/* --- Banner messages --- */}
-        {noPhoneWarning && (
+        {/* Banner si retrait verrouillé */}
+        {!canWithdraw && (
           <div
             style={{
-              padding: 16,
+              padding: 14,
               borderRadius: 12,
               background: "rgba(251,191,36,0.12)",
               border: "1px solid rgba(251,191,36,0.3)",
-              color: "var(--gold, #b45309)",
+              color: "#b45309",
               fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            ⚠️ Votre numéro Mobile Money n&apo;est pas encore enregistré.{" "}
-            <a href="/settings" style={{ color: "inherit", textDecoration: "underline" }}>
-              Ajoutez-le dans Paramètres
-            </a>{" "}
-            pour relier votre compte aux transferts qu&apo;on vous envoie.
+            <Lock size={18} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600 }}>Retrait verrouillé</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>
+                Ton numéro Mobile Money n&apos;est pas encore vérifié.{" "}
+                <a href="/settings" style={{ color: "inherit", textDecoration: "underline" }}>
+                  Vérifie-le dans Paramètres
+                </a>{" "}
+                pour pouvoir retirer.
+              </div>
+            </div>
           </div>
         )}
 
-        {/* --- Incoming transfers --- */}
+        {/* Liste des transferts entrants */}
         <section>
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px" }}>
-            Transferts entrants
-          </h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px" }}>Transferts entrants</h3>
 
           {fetching ? (
             <SkeletonRows count={3} />
@@ -220,15 +250,18 @@ export default function WalletPage() {
                 fontSize: 13,
               }}
             >
-              Aucun transfert pour le moment.{" "}
-              {!noPhoneWarning && "Demandez à un proche d'envoyer vers votre numéro."}
+              Aucun transfert pour le moment. Partage ton identifiant DiasporaConnect pour qu&apos;on te fasse un cadeau.
             </div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((t) => {
                 const c = STATUS_COLOR[t.status];
-                const canWithdraw = WITHDRAWABLE.includes(t.status);
-                const senderName = t.sender?.full_name ?? t.sender?.email ?? "Expéditeur";
+                const isWithdrawable = WITHDRAWABLE.includes(t.status);
+                const senderName =
+                  t.sender?.full_name ||
+                  [t.sender?.first_name, t.sender?.last_name].filter(Boolean).join(" ") ||
+                  t.sender?.email ||
+                  "Expéditeur";
                 return (
                   <div
                     key={t.id}
@@ -245,7 +278,17 @@ export default function WalletPage() {
                   >
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{senderName}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)" }} className="mono">
+                      {t.sender?.wallet_id && (
+                        <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                          {t.sender.wallet_id}
+                        </div>
+                      )}
+                      {t.motif && (
+                        <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2, fontStyle: "italic" }}>
+                          « {t.motif} »
+                        </div>
+                      )}
+                      <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
                         {new Date(t.created_at).toLocaleDateString("fr-FR", {
                           day: "2-digit",
                           month: "short",
@@ -276,18 +319,24 @@ export default function WalletPage() {
                       >
                         {STATUS_LABEL[t.status]}
                       </span>
-                      {canWithdraw && (
+                      {isWithdrawable && (
                         <button
                           className="btn btn-primary"
                           onClick={() => withdraw(t.id, Number(t.amount_xof))}
-                          disabled={withdrawing === t.id || !canReceive}
-                          title={!canReceive ? "Vérifie ton téléphone pour retirer" : undefined}
-                          style={{ fontSize: 12, padding: "6px 14px", opacity: canReceive ? 1 : 0.55 }}
+                          disabled={withdrawing === t.id || !canWithdraw}
+                          title={!canWithdraw ? "Vérifie ton téléphone pour retirer" : undefined}
+                          style={{ fontSize: 12, padding: "6px 14px", opacity: canWithdraw ? 1 : 0.55 }}
                         >
                           {withdrawing === t.id ? (
-                            <><Spinner size={12} />Retrait…</>
-                          ) : !canReceive ? (
-                            <><Lock size={12} />Téléphone non vérifié</>
+                            <>
+                              <Spinner size={12} />
+                              Retrait…
+                            </>
+                          ) : !canWithdraw ? (
+                            <>
+                              <Lock size={12} />
+                              Verrouillé
+                            </>
                           ) : (
                             "Retirer sur MoMo"
                           )}
