@@ -12,14 +12,40 @@ import { useRouter } from 'next/navigation';
 import type { User as SupaUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
+// Le concept "sender / receiver" a été abandonné session 8 — un seul profil
+// unifié qui peut envoyer ET recevoir. Le champ `role` n'est conservé que pour
+// compatibilité DB et n'a plus d'impact UX.
 type FrontendRole = 'sender' | 'receiver';
 type DbRole = 'expediteur' | 'beneficiaire' | 'admin';
+
+export type KycStatus = 'pending' | 'verified' | 'rejected';
+
+export interface SignupPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;       // YYYY-MM-DD
+  placeOfBirth: string;
+  phone: string;             // Full E.164 form, ex. "+22901234567"
+  country: string;           // ISO code, ex. "BJ", "FR"
+  documentType: 'NPI' | 'CIN' | 'PASSPORT' | 'RESIDENCE_PERMIT' | 'DRIVER_LICENSE';
+  documentNumber: string;
+}
 
 interface AppUser {
   id: string;
   email: string;
   role: FrontendRole;
   phone: string | null;
+  walletId: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  country: string | null;
+  kycStatus: KycStatus | null;
+  phoneVerified: boolean;
+  documentType: string | null;
+  documentNumber: string | null;
 }
 
 export type AuthResult =
@@ -41,13 +67,8 @@ interface AuthContextType {
   /** True while the initial session check is in flight. Pages should hold
    *  off any redirect-decision until `loading === false`. */
   loading: boolean;
-  login: (email: string, password: string, role: FrontendRole) => Promise<AuthResult>;
-  signup: (
-    email: string,
-    password: string,
-    role: FrontendRole,
-    phone?: string,
-  ) => Promise<AuthResult>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  signup: (payload: SignupPayload) => Promise<AuthResult>;
   logout: () => Promise<void>;
 }
 
@@ -55,9 +76,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function dbToFrontendRole(db: DbRole): FrontendRole {
   return db === 'beneficiaire' ? 'receiver' : 'sender';
-}
-function frontendToDbRole(fe: FrontendRole): DbRole {
-  return fe === 'receiver' ? 'beneficiaire' : 'expediteur';
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -72,22 +90,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hydrateFromSupabaseUser = async (authUser: SupaUser) => {
     let role: FrontendRole = 'sender';
     let phone: string | null = null;
+    let walletId: string | null = null;
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let country: string | null = null;
+    let kycStatus: KycStatus | null = null;
+    let phoneVerified = false;
+    let documentType: string | null = null;
+    let documentNumber: string | null = null;
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, phone')
+        .select('role, phone, wallet_id, first_name, last_name, country, kyc_status, phone_verified_at, document_type, document_number')
         .eq('id', authUser.id)
         .single();
       if (profile?.role) role = dbToFrontendRole(profile.role as DbRole);
       phone = profile?.phone ?? null;
+      walletId = profile?.wallet_id ?? null;
+      firstName = profile?.first_name ?? null;
+      lastName = profile?.last_name ?? null;
+      country = profile?.country ?? null;
+      kycStatus = (profile?.kyc_status as KycStatus | undefined) ?? null;
+      phoneVerified = !!profile?.phone_verified_at;
+      documentType = profile?.document_type ?? null;
+      documentNumber = profile?.document_number ?? null;
     } catch {
-      // Trigger may not have inserted yet on first signup — fall back to default
+      // Trigger may not have inserted yet on first signup — fall back to defaults
     }
     setUser({
       id: authUser.id,
       email: authUser.email ?? '',
       role,
       phone,
+      walletId,
+      firstName,
+      lastName,
+      country,
+      kycStatus,
+      phoneVerified,
+      documentType,
+      documentNumber,
     });
   };
 
@@ -162,29 +204,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { ok: true };
   };
 
-  const signup = async (
-    email: string,
-    password: string,
-    role: FrontendRole,
-    phone?: string,
-  ): Promise<AuthResult> => {
-    const dbRole = frontendToDbRole(role);
+  const signup = async (payload: SignupPayload): Promise<AuthResult> => {
+    // Tout passe via options.data → la trigger SQL handle_new_user (sécurity
+    // definer, donc bypass RLS) lit ces champs et crée le profil complet.
+    // Cela marche même quand "Confirm email" est activé (pas de session
+    // immédiate côté client).
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { role: dbRole, phone: phone ?? null } },
+      email: payload.email,
+      password: payload.password,
+      options: {
+        data: {
+          first_name: payload.firstName,
+          last_name: payload.lastName,
+          date_of_birth: payload.dateOfBirth,
+          place_of_birth: payload.placeOfBirth,
+          phone: payload.phone,
+          country: payload.country,
+          document_type: payload.documentType,
+          document_number: payload.documentNumber,
+        },
+      },
     });
     if (error || !data.user) {
       const code = classifySupabaseError(error?.message);
       return { ok: false, code, message: humanMessage(code) };
-    }
-    // The SQL trigger creates the profile with default role 'expediteur'.
-    // Write back the actual role + phone the user picked.
-    const updates: { role?: DbRole; phone?: string } = {};
-    if (dbRole !== 'expediteur') updates.role = dbRole;
-    if (phone) updates.phone = phone;
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('profiles').update(updates).eq('id', data.user.id);
     }
     return { ok: true };
   };

@@ -24,6 +24,8 @@ const PROTECTED_PREFIXES = [
   '/compare',
   '/blockchain',
   '/wallet',
+  '/account',
+  '/kyc',
 ];
 
 export async function proxy(request: NextRequest) {
