@@ -15,11 +15,19 @@ import { createClient } from '@/lib/supabase/client';
 type FrontendRole = 'sender' | 'receiver';
 type DbRole = 'expediteur' | 'beneficiaire' | 'admin';
 
+export type KycStatus = 'pending' | 'verified' | 'rejected';
+
 interface AppUser {
   id: string;
   email: string;
   role: FrontendRole;
   phone: string | null;
+  walletId: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  country: string | null;
+  kycStatus: KycStatus | null;
+  phoneVerified: boolean;
 }
 
 export type AuthResult =
@@ -72,22 +80,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hydrateFromSupabaseUser = async (authUser: SupaUser) => {
     let role: FrontendRole = 'sender';
     let phone: string | null = null;
+    let walletId: string | null = null;
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let country: string | null = null;
+    let kycStatus: KycStatus | null = null;
+    let phoneVerified = false;
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, phone')
+        .select('role, phone, wallet_id, first_name, last_name, country, kyc_status, phone_verified_at')
         .eq('id', authUser.id)
         .single();
       if (profile?.role) role = dbToFrontendRole(profile.role as DbRole);
       phone = profile?.phone ?? null;
+      walletId = profile?.wallet_id ?? null;
+      firstName = profile?.first_name ?? null;
+      lastName = profile?.last_name ?? null;
+      country = profile?.country ?? null;
+      kycStatus = (profile?.kyc_status as KycStatus | undefined) ?? null;
+      phoneVerified = !!profile?.phone_verified_at;
     } catch {
-      // Trigger may not have inserted yet on first signup — fall back to default
+      // Trigger may not have inserted yet on first signup — fall back to defaults
     }
     setUser({
       id: authUser.id,
       email: authUser.email ?? '',
       role,
       phone,
+      walletId,
+      firstName,
+      lastName,
+      country,
+      kycStatus,
+      phoneVerified,
     });
   };
 

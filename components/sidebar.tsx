@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, X } from "lucide-react";
+import { LogOut, X, UserCircle } from "lucide-react";
 import { 
   LogoIcon, 
   DashboardIcon, 
@@ -41,9 +41,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
 
   const toolItems = isReceiver
     ? [
+        { label: "Mon compte", icon: UserCircle, href: "/account" },
         { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
       ]
     : [
+        { label: "Mon compte", icon: UserCircle, href: "/account" },
         { label: "Comparateur frais", icon: CompareIcon, href: "/compare" },
         { label: "Mes preuves blockchain", icon: ShieldIcon, href: "/blockchain" },
         { label: "Paramètres", icon: SettingsIcon, href: "/settings" },
