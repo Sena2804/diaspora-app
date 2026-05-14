@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
+import { usePinConfirm } from "@/components/pin-gate";
 
 interface Beneficiaire {
   id: string;
@@ -43,6 +44,7 @@ export default function TransferPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const { confirmWithPin } = usePinConfirm();
 
   const [beneficiaires, setBeneficiaires] = useState<Beneficiaire[]>([]);
   const [fetchingBenefs, setFetchingBenefs] = useState(true);
@@ -114,6 +116,15 @@ export default function TransferPage() {
     e.preventDefault();
     if (!selectedId) {
       toast.error("Sélectionnez un bénéficiaire.");
+      return;
+    }
+    // Action sensible → on demande le PIN avant de créer le transfert.
+    const ok = await confirmWithPin({
+      title: "Confirme l'envoi",
+      subtitle: `Tu vas envoyer ${amount} € depuis ton compte. Saisis ton PIN pour confirmer.`,
+    });
+    if (!ok) {
+      toast.info("Transfert annulé.");
       return;
     }
     setSubmitting(true);

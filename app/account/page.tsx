@@ -3,16 +3,18 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
-import { Copy, Check, Share2, Download, ShieldCheck, ShieldAlert, Phone, Mail, Globe, IdCard } from "lucide-react";
+import { Copy, Check, Share2, Download, ShieldCheck, ShieldAlert, Phone, Mail, Globe, IdCard, Lock } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/toast";
+import { PhoneVerifyModal } from "@/components/phone-verify-modal";
 
 export default function AccountPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   React.useEffect(() => {
     if (!loading && !isAuthenticated) router.push("/");
@@ -67,6 +69,9 @@ export default function AccountPage() {
   if (loading || !isAuthenticated) return null;
 
   const kycVerified = user?.kycStatus === "verified";
+  // Tant que le téléphone n'est pas vérifié, on grise tout ce qui sert à
+  // recevoir de l'argent : QR code, partage WhatsApp, téléchargement.
+  const canReceive = !!user?.phone && !!user?.phoneVerified;
 
   return (
     <DashboardShell
@@ -74,6 +79,40 @@ export default function AccountPage() {
       subtitle="Partage cet identifiant pour recevoir de l'argent. Ton numéro de téléphone reste privé."
     >
       <div style={{ display: "grid", gap: 20, maxWidth: 760 }}>
+        {!canReceive && (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: "rgba(251,191,36,0.12)",
+              border: "1px solid rgba(251,191,36,0.35)",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <Lock size={22} color="#b45309" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#b45309" }}>
+                Recevoir de l&apos;argent — verrouillé
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                {!user?.phone
+                  ? "Tu n'as pas encore renseigné de numéro Mobile Money. Ajoute-en un dans Paramètres pour activer la réception."
+                  : "Ton numéro n'est pas encore vérifié par SMS. Tu peux envoyer de l'argent, mais pas en recevoir."}
+              </div>
+            </div>
+            {user?.phone ? (
+              <button className="btn btn-primary" style={{ fontSize: 12, padding: "8px 14px" }} onClick={() => setVerifyOpen(true)}>
+                Vérifier mon numéro
+              </button>
+            ) : (
+              <a href="/settings" className="btn btn-primary" style={{ fontSize: 12, padding: "8px 14px" }}>
+                Ajouter un numéro
+              </a>
+            )}
+          </div>
+        )}
         {/* ============================ Wallet card ============================ */}
         <section
           style={{
@@ -123,8 +162,8 @@ export default function AccountPage() {
               <button
                 className="btn btn-primary"
                 onClick={copyWalletId}
-                disabled={!walletId}
-                style={{ fontSize: 13, padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
+                disabled={!walletId || !canReceive}
+                style={{ fontSize: 13, padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6, opacity: canReceive ? 1 : 0.5 }}
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 {copied ? "Copié" : "Copier l'identifiant"}
@@ -132,7 +171,7 @@ export default function AccountPage() {
               <button
                 className="btn"
                 onClick={shareWhatsApp}
-                disabled={!walletId}
+                disabled={!walletId || !canReceive}
                 style={{
                   fontSize: 13,
                   padding: "8px 14px",
@@ -142,6 +181,8 @@ export default function AccountPage() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 6,
+                  opacity: canReceive ? 1 : 0.5,
+                  cursor: canReceive ? "pointer" : "not-allowed",
                 }}
               >
                 <Share2 size={14} />
@@ -150,8 +191,8 @@ export default function AccountPage() {
               <button
                 className="btn"
                 onClick={downloadQR}
-                disabled={!walletId}
-                style={{ fontSize: 13, padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
+                disabled={!walletId || !canReceive}
+                style={{ fontSize: 13, padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6, opacity: canReceive ? 1 : 0.5 }}
               >
                 <Download size={14} />
                 Télécharger le QR
@@ -167,12 +208,34 @@ export default function AccountPage() {
               borderRadius: 12,
               display: "grid",
               placeItems: "center",
+              position: "relative",
+              filter: canReceive ? "none" : "blur(6px) grayscale(0.4)",
+              opacity: canReceive ? 1 : 0.55,
+              transition: "filter 0.2s, opacity 0.2s",
             }}
           >
             {walletId ? (
               <QRCodeCanvas value={qrValue} size={148} level="M" includeMargin={false} />
             ) : (
               <div style={{ width: 148, height: 148, background: "#f3f4f6" }} />
+            )}
+            {!canReceive && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#1f2937",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: 8,
+                  textAlign: "center",
+                  filter: "blur(0)",
+                }}
+              >
+                <Lock size={20} />
+              </div>
             )}
           </div>
         </section>
@@ -282,6 +345,16 @@ export default function AccountPage() {
           </div>
         </section>
       </div>
+
+      <PhoneVerifyModal
+        open={verifyOpen}
+        phone={user?.phone ?? null}
+        onClose={() => setVerifyOpen(false)}
+        onSuccess={() => {
+          setVerifyOpen(false);
+          setTimeout(() => window.location.reload(), 800);
+        }}
+      />
     </DashboardShell>
   );
 }

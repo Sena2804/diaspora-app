@@ -108,7 +108,10 @@ export default function OnboardingPage() {
   const handleFinalSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const cleanPhone = phoneLocal.replace(/[\s-]/g, "");
-    if (!country.phoneRegex.test(cleanPhone)) {
+    // Le téléphone est OPTIONNEL à l'inscription (utile pour la diaspora).
+    // S'il est saisi, on valide son format ; sinon on l'omet et il sera
+    // ajouté plus tard depuis /settings.
+    if (cleanPhone.length > 0 && !country.phoneRegex.test(cleanPhone)) {
       toast.error(`Format de numéro invalide pour ${country.name}. Attendu : ${country.phonePlaceholder}.`);
       return;
     }
@@ -127,7 +130,7 @@ export default function OnboardingPage() {
         lastName: lastName.trim(),
         dateOfBirth,
         placeOfBirth: placeOfBirth.trim(),
-        phone: buildFullPhone(country, cleanPhone),
+        phone: cleanPhone.length > 0 ? buildFullPhone(country, cleanPhone) : "",
         country: countryCode,
         documentType,
         documentNumber: cleanDoc.toUpperCase(),
@@ -374,9 +377,11 @@ export default function OnboardingPage() {
                 {/* ═══════════ STEP 3 ═══════════ */}
                 {signupStep === 3 && (
                   <form onSubmit={handleFinalSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Phone with dial code prefix */}
+                    {/* Phone with dial code prefix — OPTIONAL pour la diaspora */}
                     <div className="field">
-                      <label>Téléphone Mobile Money <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>({country.name})</span></label>
+                      <label>
+                        Téléphone Mobile Money <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(optionnel · {country.name})</span>
+                      </label>
                       <div className="input" style={{ paddingLeft: 0 }}>
                         <span
                           className="mono"
@@ -398,7 +403,6 @@ export default function OnboardingPage() {
                           onChange={(e) => setPhoneLocal(e.target.value)}
                           placeholder={country.phonePlaceholder}
                           style={{ paddingLeft: 12 }}
-                          required
                         />
                         {phoneLocal.length > 0 && (
                           phoneValid ? (
@@ -409,7 +413,7 @@ export default function OnboardingPage() {
                         )}
                       </div>
                       <span className="dim" style={{ fontSize: 11, marginTop: 4, display: "block", color: phoneLocal.length > 0 && !phoneValid ? "#b91c1c" : "var(--text-tertiary)" }}>
-                        {country.phoneHelp}
+                        {phoneLocal.length > 0 ? country.phoneHelp : "Tu pourras l'ajouter plus tard. Sans numéro, tu peux envoyer mais pas recevoir d'argent."}
                       </span>
                     </div>
 
@@ -470,7 +474,7 @@ export default function OnboardingPage() {
                       className="btn btn-primary btn-lg btn-block"
                       style={{ marginTop: 6 }}
                       type="submit"
-                      disabled={submitting || !phoneValid || !docValid || phoneLocal.length === 0 || documentNumber.length === 0}
+                      disabled={submitting || !phoneValid || !docValid || documentNumber.length === 0}
                     >
                       {submitting ? <><Spinner size={16} color="currentColor" />Création…</> : <>Créer mon compte <LogoIcon style={{ width: 18, height: 18 }} /></>}
                     </button>

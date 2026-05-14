@@ -37,10 +37,13 @@ export function usePinConfirm() {
   return ctx;
 }
 
+const SESSION_VERIFIED_KEY = "dc_pin_verified_session";
+
 export function PinGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const [hasPin, setHasPin] = useState<boolean | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [sessionVerifyOpen, setSessionVerifyOpen] = useState(false);
 
   // Verify-mode modal state, controlled by `confirmWithPin`.
   const [verifyState, setVerifyState] = useState<{
@@ -50,11 +53,23 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   }>({ open: false });
   const resolveRef = useRef<((ok: boolean) => void) | null>(null);
 
-  // Check PIN status when the session is ready.
+  // Clear the session-verified flag whenever the user changes (login/logout).
   useEffect(() => {
-    if (loading || !isAuthenticated) {
+    if (!isAuthenticated) {
+      try {
+        sessionStorage.removeItem(SESSION_VERIFIED_KEY);
+      } catch {}
       setHasPin(null);
       setSetupOpen(false);
+      setSessionVerifyOpen(false);
+    }
+  }, [isAuthenticated]);
+
+  // Check PIN status when the session is ready, then:
+  //  - if no PIN  → force setup modal (blocking)
+  //  - if PIN exists AND not verified this session → force verify modal (blocking)
+  useEffect(() => {
+    if (loading || !isAuthenticated || !user?.id) {
       return;
     }
     let aborted = false;
@@ -64,7 +79,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         if (aborted) return;
         const value = !!data?.has_pin;
         setHasPin(value);
-        if (!value) setSetupOpen(true);
+        if (!value) {
+          setSetupOpen(true);
+        } else {
+          // PIN exists → require verify if not done this session.
+          let verifiedFor: string | null = null;
+          try {
+            verifiedFor = sessionStorage.getItem(SESSION_VERIFIED_KEY);
+          } catch {}
+          if (verifiedFor !== user.id) {
+            setSessionVerifyOpen(true);
+          }
+        }
       })
       .catch(() => {
         if (!aborted) setHasPin(null);
@@ -72,7 +98,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     return () => {
       aborted = true;
     };
-  }, [isAuthenticated, loading]);
+  }, [isAuthenticated, loading, user?.id]);
 
   const confirmWithPin = useCallback<ConfirmFn>((options) => {
     // Si pas de PIN défini, on force le setup d'abord et on refuse l'action.
@@ -98,6 +124,25 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         onSuccess={() => {
           setHasPin(true);
           setSetupOpen(false);
+          // PIN just created counts as verified for this session.
+          try {
+            if (user?.id) sessionStorage.setItem(SESSION_VERIFIED_KEY, user.id);
+          } catch {}
+        }}
+      />
+
+      <PinModal
+        open={sessionVerifyOpen}
+        mode="verify"
+        blocking
+        title="Confirme ton PIN"
+        subtitle="Pour ouvrir l'application, saisis ton PIN à 4-6 chiffres."
+        onClose={() => setSessionVerifyOpen(false)}
+        onSuccess={() => {
+          setSessionVerifyOpen(false);
+          try {
+            if (user?.id) sessionStorage.setItem(SESSION_VERIFIED_KEY, user.id);
+          } catch {}
         }}
       />
 
