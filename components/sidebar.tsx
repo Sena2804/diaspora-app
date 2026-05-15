@@ -4,15 +4,16 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, X, UserCircle } from "lucide-react";
-import { 
-  LogoIcon, 
-  DashboardIcon, 
-  SendIcon, 
-  HistoryIcon, 
-  UsersIcon, 
-  CompareIcon, 
-  ShieldIcon, 
-  SettingsIcon 
+import { CalendarClock, PiggyBank } from "lucide-react";
+import {
+  LogoIcon,
+  DashboardIcon,
+  SendIcon,
+  HistoryIcon,
+  UsersIcon,
+  CompareIcon,
+  ShieldIcon,
+  SettingsIcon
 } from "./icons";
 import { useAuth } from "@/context/AuthContext";
 
@@ -32,6 +33,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps = {}) {
   const navItems = [
     { label: "Tableau de bord", icon: DashboardIcon, href: "/dashboard", badge: null },
     { label: "Nouvel envoi", icon: SendIcon, href: "/transfer", badge: null },
+    { label: "Envois récurrents", icon: CalendarClock, href: "/recurring", badge: null },
+    { label: "Mes caisses", icon: PiggyBank, href: "/vault", badge: null },
     { label: "Mon portefeuille", icon: DashboardIcon, href: "/wallet", badge: null },
     { label: "Historique", icon: HistoryIcon, href: "/history", badge: null },
     { label: "Destinataires", icon: UsersIcon, href: "/recipients", badge: null },
