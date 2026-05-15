@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, FormEvent } from "react";
-import { Mail, Lock, Eye, EyeOff, User, Calendar, MapPin, Phone, Globe, ArrowLeft, IdCard, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, Calendar, MapPin, Phone, Globe, ArrowLeft, IdCard, FileText, CheckCircle2, AlertCircle, MailCheck } from "lucide-react";
 import styles from "./onboarding.module.css";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoIcon } from "@/components/icons";
@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { COUNTRIES, findCountry, buildFullPhone, type DocumentType } from "@/lib/countries";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 type SignupStep = 1 | 2 | 3;
 type DocCode = DocumentType["code"];
@@ -17,6 +18,11 @@ type DocCode = DocumentType["code"];
 export default function OnboardingPage() {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [signupStep, setSignupStep] = useState<SignupStep>(1);
+
+  // Affiche un écran « Vérifie ton email » bloquant juste après une inscription
+  // réussie. L'email confirmé est obligatoire avant de pouvoir se connecter.
+  const [signupSuccessEmail, setSignupSuccessEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   // Step 1
   const [email, setEmail] = useState("");
@@ -123,6 +129,7 @@ export default function OnboardingPage() {
 
     setSubmitting(true);
     try {
+      // (helpers post-signup déclarés plus bas)
       const result = await signup({
         email,
         password,
@@ -141,11 +148,43 @@ export default function OnboardingPage() {
           setTimeout(() => switchMode("login"), 400);
         }
       } else {
-        toast.success("Compte créé ! Vérifie ton email pour activer ton compte.");
+        // Bascule sur l'écran de confirmation. Toast informatif en complément.
+        toast.success("Compte créé. Confirme ton email pour continuer.");
+        setSignupSuccessEmail(email);
       }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Demande à Supabase de renvoyer l'email de confirmation. Utile si le user a
+  // perdu le premier mail ou s'est trompé d'adresse au signup.
+  const resendConfirmation = async () => {
+    if (!signupSuccessEmail) return;
+    setResending(true);
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: signupSuccessEmail,
+      });
+      if (error) {
+        toast.error(error.message || "Impossible de renvoyer l'email.");
+      } else {
+        toast.success("Email renvoyé. Vérifie aussi tes spams.");
+      }
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Une fois l'email confirmé, l'utilisateur revient sur la page et clique ici
+  // pour passer au formulaire de connexion avec l'email déjà rempli.
+  const goToLoginAfterConfirmation = () => {
+    setSignupSuccessEmail(null);
+    setIsLoginMode(true);
+    setSignupStep(1);
+    // L'email est déjà dans le state — il reste pré-rempli côté login.
   };
 
   return (
@@ -227,6 +266,83 @@ export default function OnboardingPage() {
               </button>
               <button className="btn btn-ghost btn-block" onClick={async () => { await logout(); toast.info("Déconnecté."); }}>
                 Se déconnecter
+              </button>
+            </div>
+          </div>
+        ) : signupSuccessEmail ? (
+          <div className={styles.authCard}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 16,
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(45,212,191,0.15)",
+                color: "var(--primary)",
+                margin: "0 auto 18px",
+              }}
+            >
+              <MailCheck size={32} />
+            </div>
+            <span className="eyebrow accent" style={{ display: "block", textAlign: "center", marginBottom: 8 }}>Inscription réussie</span>
+            <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 12px", textAlign: "center" }}>
+              Vérifie ton email
+            </h2>
+            <p style={{ color: "var(--text-tertiary)", fontSize: 14, margin: "0 0 20px", textAlign: "center", lineHeight: 1.5 }}>
+              On vient d&apos;envoyer un lien de confirmation à
+              <br />
+              <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{signupSuccessEmail}</strong>.
+              <br />
+              <span style={{ fontSize: 13 }}>
+                Clique sur le lien dans cet email pour activer ton compte. Tu ne pourras pas te connecter avant.
+              </span>
+            </p>
+
+            <div style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "var(--bg-base)",
+              border: "1px solid var(--border-subtle)",
+              fontSize: 12,
+              color: "var(--text-tertiary)",
+              marginBottom: 18,
+              lineHeight: 1.5,
+            }}>
+              <strong style={{ color: "var(--text-secondary)" }}>Tu ne vois pas l&apos;email ?</strong>
+              <ul style={{ margin: "6px 0 0 16px", padding: 0 }}>
+                <li>Vérifie ton dossier <strong>spam</strong> ou <strong>promotions</strong>.</li>
+                <li>Patiente 1 à 2 minutes — la livraison peut prendre du temps.</li>
+                <li>Sinon, clique sur « Renvoyer l&apos;email » ci-dessous.</li>
+              </ul>
+            </div>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <button
+                className="btn btn-primary btn-lg btn-block"
+                onClick={goToLoginAfterConfirmation}
+              >
+                <CheckCircle2 size={16} />
+                J&apos;ai confirmé, me connecter
+              </button>
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={resendConfirmation}
+                disabled={resending}
+              >
+                {resending ? <><Spinner size={14} color="currentColor" />Envoi…</> : <><Mail size={14} />Renvoyer l&apos;email</>}
+              </button>
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={() => {
+                  setSignupSuccessEmail(null);
+                  setIsLoginMode(false);
+                  setSignupStep(1);
+                }}
+                disabled={resending}
+                style={{ fontSize: 12 }}
+              >
+                Modifier mes informations d&apos;inscription
               </button>
             </div>
           </div>
