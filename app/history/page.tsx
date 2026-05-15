@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Inbox, CheckCircle2 } from "lucide-react";
+import { Send, Inbox, CheckCircle2, PiggyBank, Wallet } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -61,7 +61,46 @@ const STATUS_COLOR: Record<Status, { bg: string; fg: string }> = {
   failed: { bg: "rgba(239,68,68,0.16)", fg: "#b91c1c" },
 };
 
-const FILTERS: ("all" | Status)[] = ["all", "pending", "momo_initiated", "completed", "failed"];
+type FilterKey =
+  | "all"
+  | "sent"
+  | "received"
+  | "momo_withdrawal"
+  | "vault_withdrawal"
+  | "pending"
+  | "failed";
+
+const FILTERS: FilterKey[] = [
+  "all",
+  "sent",
+  "received",
+  "momo_withdrawal",
+  "vault_withdrawal",
+  "pending",
+  "failed",
+];
+
+const FILTER_LABEL: Record<FilterKey, string> = {
+  all: "Tout",
+  sent: "Envois",
+  received: "Réceptions",
+  momo_withdrawal: "Retraits MoMo",
+  vault_withdrawal: "Retraits coffres",
+  pending: "En attente",
+  failed: "Échecs",
+};
+
+interface VaultWithdrawal {
+  id: string;
+  amount_xof: number;
+  occurred_at: string;
+  note: string | null;
+  vault: { id: string; name: string } | null;
+}
+
+type HistoryRow =
+  | { kind: "transfer"; data: Transfert; ts: number }
+  | { kind: "vault_withdrawal"; data: VaultWithdrawal; ts: number };
 
 export default function HistoryPage() {
   const { isAuthenticated, loading } = useAuth();
@@ -70,8 +109,9 @@ export default function HistoryPage() {
   const toast = useToast();
 
   const [items, setItems] = useState<Transfert[]>([]);
+  const [vaultWithdrawals, setVaultWithdrawals] = useState<VaultWithdrawal[]>([]);
   const [fetching, setFetching] = useState(true);
-  const [filter, setFilter] = useState<"all" | Status>("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [finalizing, setFinalizing] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,11 +120,17 @@ export default function HistoryPage() {
 
   async function refresh() {
     try {
-      const r = await fetch("/api/transferts?limit=50");
-      const data = (await r.json()) as { items?: Transfert[] };
-      setItems(data.items ?? []);
+      const [tRes, wRes] = await Promise.all([
+        fetch("/api/transferts?limit=50"),
+        fetch("/api/vaults/withdrawals"),
+      ]);
+      const tData = (await tRes.json()) as { items?: Transfert[] };
+      const wData = (await wRes.json()) as { items?: VaultWithdrawal[] };
+      setItems(tData.items ?? []);
+      setVaultWithdrawals(wData.items ?? []);
     } catch {
       setItems([]);
+      setVaultWithdrawals([]);
     }
   }
 
@@ -133,10 +179,36 @@ export default function HistoryPage() {
     }
   }
 
-  const filtered = filter === "all" ? items : items.filter((t) => t.status === filter);
+  // Liste unifiée triée par date, transferts + retraits coffres.
+  const merged: HistoryRow[] = [
+    ...items.map<HistoryRow>((t) => ({ kind: "transfer", data: t, ts: new Date(t.created_at).getTime() })),
+    ...vaultWithdrawals.map<HistoryRow>((w) => ({ kind: "vault_withdrawal", data: w, ts: new Date(w.occurred_at).getTime() })),
+  ].sort((a, b) => b.ts - a.ts);
+
+  // Un retrait MoMo = transfert reçu dont l'état a dépassé "stellar_received"
+  // (= le destinataire a déclenché le payout Mobile Money).
+  const isMomoWithdrawal = (t: Transfert): boolean =>
+    t.direction === "received" && (t.status === "momo_initiated" || t.status === "completed");
+
+  const filtered = merged.filter((row) => {
+    if (filter === "all") return true;
+    if (filter === "vault_withdrawal") return row.kind === "vault_withdrawal";
+    if (row.kind !== "transfer") return false;
+    const t = row.data;
+    switch (filter) {
+      case "sent": return t.direction === "sent";
+      case "received": return t.direction === "received" && !isMomoWithdrawal(t);
+      case "momo_withdrawal": return isMomoWithdrawal(t);
+      case "pending": return t.status === "pending" || t.status === "stellar_pending";
+      case "failed": return t.status === "failed";
+      default: return false;
+    }
+  });
+
+  const totalCount = merged.length;
 
   return (
-    <DashboardShell title="Historique" subtitle={`${items.length} transfert${items.length > 1 ? "s" : ""} au total`}>
+    <DashboardShell title="Historique" subtitle={`${totalCount} opération${totalCount > 1 ? "s" : ""} au total`}>
       <div style={{ display: "grid", gap: 16, maxWidth: 980 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FILTERS.map((s) => (
@@ -154,7 +226,7 @@ export default function HistoryPage() {
                 fontWeight: 500,
               }}
             >
-              {s === "all" ? "Tous" : STATUS_LABEL[s as Status]}
+              {FILTER_LABEL[s] ?? s}
             </button>
           ))}
         </div>
@@ -164,19 +236,114 @@ export default function HistoryPage() {
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", border: "1px dashed var(--border)", borderRadius: 16 }}>
             <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: 0 }}>
-              {filter === "all" ? "Aucun transfert pour le moment." : "Aucun transfert dans cette catégorie."}
+              {filter === "all" ? "Aucune opération pour le moment." : "Aucune opération dans cette catégorie."}
             </p>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
-            {filtered.map((t) => {
+            {filtered.map((row) => {
+              if (row.kind === "vault_withdrawal") {
+                const w = row.data;
+                const amount = Math.abs(Number(w.amount_xof));
+                return (
+                  <div
+                    key={`vw-${w.id}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "auto 1.5fr 1fr 1fr auto",
+                      gap: 14,
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 12,
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        display: "grid",
+                        placeItems: "center",
+                        background: "rgba(45,212,191,0.16)",
+                        color: "#0d9488",
+                      }}
+                      title="Retrait coffre"
+                    >
+                      <PiggyBank size={14} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>
+                        Retrait de la caisse
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                        « {w.vault?.name ?? "Caisse supprimée"} »
+                      </div>
+                      {w.note && (
+                        <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2, fontStyle: "italic" }}>
+                          {w.note}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="mono" style={{ fontWeight: 600, color: "#0d9488" }}>
+                        +{amount.toLocaleString("fr-FR")} XOF
+                      </div>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                        ≈ €{(amount / 655.957).toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: "rgba(45,212,191,0.16)",
+                          color: "#0d9488",
+                        }}
+                      >
+                        Coffre clôturé
+                      </span>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
+                        {new Date(w.occurred_at).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                    <div />
+                  </div>
+                );
+              }
+
+              const t = row.data;
               const color = STATUS_COLOR[t.status];
               const isSent = t.direction === "sent";
+              const isMomo = isMomoWithdrawal(t);
               const counterparty = isSent
                 ? t.recipient?.full_name ?? t.beneficiaire?.full_name ?? "—"
                 : t.sender?.full_name ?? "—";
               const counterpartyId = isSent ? t.recipient?.wallet_id : t.sender?.wallet_id;
               const needsFinalize = isSent && t.status === "pending";
+
+              // Couleur d'icône & libellé selon le type d'opération.
+              const iconBg = isSent
+                ? "rgba(249,115,22,0.12)"
+                : isMomo
+                  ? "rgba(251,191,36,0.16)"
+                  : "rgba(34,197,94,0.12)";
+              const iconFg = isSent ? "#ea580c" : isMomo ? "#b45309" : "#15803d";
+              const headerLabel = isSent
+                ? `À ${counterparty}`
+                : isMomo
+                  ? `Retrait MoMo (transfert de ${counterparty})`
+                  : `De ${counterparty}`;
 
               return (
                 <div
@@ -199,18 +366,15 @@ export default function HistoryPage() {
                       borderRadius: 8,
                       display: "grid",
                       placeItems: "center",
-                      background: isSent ? "rgba(249,115,22,0.12)" : "rgba(34,197,94,0.12)",
-                      color: isSent ? "#ea580c" : "#15803d",
+                      background: iconBg,
+                      color: iconFg,
                     }}
-                    title={isSent ? "Envoyé" : "Reçu"}
+                    title={isSent ? "Envoyé" : isMomo ? "Retrait MoMo" : "Reçu"}
                   >
-                    {isSent ? <Send size={14} /> : <Inbox size={14} />}
+                    {isSent ? <Send size={14} /> : isMomo ? <Wallet size={14} /> : <Inbox size={14} />}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>
-                      {isSent ? "À " : "De "}
-                      {counterparty}
-                    </div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{headerLabel}</div>
                     {counterpartyId && (
                       <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
                         {counterpartyId}

@@ -16,6 +16,8 @@ import { createServerClient } from '@supabase/ssr';
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/transfer',
+  '/recurring',
+  '/vault',
   '/recipients',
   '/history',
   '/recharge',
